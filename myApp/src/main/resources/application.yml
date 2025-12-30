@@ -29,6 +29,7 @@ rocketmq:
      send-message-timeout: 3000
      compress-message-body-threshold: 4096
      retry-times-when-send-failed: 2
+
 mybatis:
   mapper-locations: classpath:mapper/*.xml
 

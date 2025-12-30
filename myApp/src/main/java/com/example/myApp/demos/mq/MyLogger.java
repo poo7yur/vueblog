@@ -1,4 +1,4 @@
-package com.example.myApp.demos.utils;
+package com.example.myApp.demos.mq;
 
 import com.example.myApp.demos.entity.LogEvent;
 import org.apache.rocketmq.client.producer.SendCallback;
