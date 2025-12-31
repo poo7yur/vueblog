@@ -4,7 +4,6 @@ import com.example.myApp.demos.service.FileOptService;
 import com.sun.deploy.net.URLEncoder;
 import io.minio.*;
 import io.minio.http.Method;
-import jdk.internal.util.xml.impl.Input;
 import lombok.Data;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpHeaders;
@@ -38,12 +37,9 @@ public class MinioFileOptServiceImpl implements FileOptService {
         if (!minioClient.bucketExists(BucketExistsArgs.builder().bucket(bucket).build())) {
             minioClient.makeBucket(MakeBucketArgs.builder().bucket(bucket).build());
         }
-        //指定返回的 Content-Type
-        Map<String, String> extraParams = new HashMap<>();
-        extraParams.put("response-content-type", "text/plain; charset=UTF-8");
-
         long dir = System.currentTimeMillis();
-        String fileName = dir + "/" + file.getOriginalFilename();
+        String originalFilename = file.getOriginalFilename();
+        String fileName = dir + "/" + originalFilename;
         try (InputStream inputStream = file.getInputStream()) {
             minioClient.putObject(
                     PutObjectArgs.builder()
@@ -59,10 +55,9 @@ public class MinioFileOptServiceImpl implements FileOptService {
                 .bucket(bucket)
                 .method(Method.GET)
                 .expiry(7 * 24 * 3600)
-                .object(fileName).extraQueryParams(extraParams)
+                .object(fileName).extraQueryParams(getExtraPrams(originalFilename))
                 .build());
     }
-
 
     @Override
     public void downloadFile(String fileId, String fileName, HttpServletResponse response) throws Exception {
@@ -72,6 +67,18 @@ public class MinioFileOptServiceImpl implements FileOptService {
                 .object(objName)
                 .build());
         writeByStream(fileName, inputStream, response);
+    }
+
+    private Map<String ,String> getExtraPrams(String fileName){
+        Map<String, String> extraParams = new HashMap<>();
+        if (".jpg".endsWith(fileName.toLowerCase()) || fileName.toLowerCase().endsWith(".jpeg")) {
+            extraParams.put("response-content-type", "image/jpeg");
+        } else if (fileName.toLowerCase().endsWith(".png")) {
+            extraParams.put("response-content-type", "image/png");
+        } else if (fileName.toLowerCase().endsWith(".txt")) {
+            extraParams.put("response-content-type", "text/plain; charset=UTF-8");
+        }
+        return extraParams;
     }
 
     private void writeByStream(String fileName, InputStream inputStream, HttpServletResponse response) throws IOException {

@@ -2,6 +2,7 @@ package com.example.myApp.demos.controller;
 
 import com.example.myApp.demos.aop.AccessLog;
 import com.example.myApp.demos.entity.OrderDto;
+import com.example.myApp.demos.entity.R;
 import com.example.myApp.demos.mq.MyLogger;
 import com.example.myApp.demos.service.FileOptService;
 import org.springframework.web.bind.annotation.*;
@@ -20,35 +21,37 @@ public class MessageController {
     private FileOptService fileOptService;
 
     @GetMapping("/do")
-    public String doSomething() {
+    public R<String> doSomething() {
         myLogger.log("INFO", "querySomething");
-        return "ok";
+        return R.ok("do");
     }
 
     @PostMapping("/order")
     @AccessLog(module = "order manage", description = "create order")
-    public String order(@RequestBody OrderDto order) {
-        return "create order done";
+    public R<String> order(@RequestBody OrderDto order) {
+        return R.ok("create order");
     }
 
     @PostMapping("/upload")
     @AccessLog(module = "file manage", description = "upload file")
-    public String uploadFile(@RequestPart("file") MultipartFile file) {
+    public R<String> uploadFile(@RequestPart("file") MultipartFile file) {
+        String msg;
         try {
-            return fileOptService.uploadFile(file);
+            msg = fileOptService.uploadFile(file);
+            return R.ok(msg);
         } catch (Exception e) {
-            return "上传失败：" + e.getMessage();
+            msg = "上传失败：" + e.getMessage();
+            return R.fail(msg);
         }
     }
 
     @GetMapping("/download")
     @AccessLog(module = "file manage", description = "download file")
-    public String downloadFile(@RequestParam("fileId") String fileId, @RequestParam("fileName") String fileName, HttpServletResponse response) {
+    public void downloadFile(@RequestParam("fileId") String fileId, @RequestParam("fileName") String fileName, HttpServletResponse response) {
         try {
             fileOptService.downloadFile(fileId, fileName, response);
-            return "下载成功";
         } catch (Exception e) {
-            return "下载失败: " + e.getMessage();
+            throw new RuntimeException(e);
         }
     }
 

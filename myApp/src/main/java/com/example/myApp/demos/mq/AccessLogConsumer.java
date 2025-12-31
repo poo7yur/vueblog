@@ -16,7 +16,6 @@ import org.springframework.stereotype.Component;
 public class AccessLogConsumer implements RocketMQListener<LogEntity> {
     @Override
     public void onMessage(LogEntity logEntity) {
-        //写数据库
-        System.out.println("访问日志保存成功：" + JSONObject.toJSONString(logEntity));
+        System.out.println("访问日志消费成功：" + JSONObject.toJSONString(logEntity));
     }
 }

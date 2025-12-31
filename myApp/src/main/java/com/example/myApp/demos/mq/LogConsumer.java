@@ -21,7 +21,7 @@ public class LogConsumer implements RocketMQListener<LogEvent> {
 
     @Override
     public void onMessage(LogEvent event) {
-        //消费成功 写数据库
+        System.out.println("消费成功 保存到log_event表");
         logEventService.saveLogEvent(event);
     }
 }

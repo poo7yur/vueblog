@@ -22,7 +22,7 @@ public class MyLogger {
         rocketMQTemplate.asyncSend(topic, logEvent, new SendCallback() {
             @Override
             public void onSuccess(SendResult sendResult) {
-                System.out.println("记录成功");
+                System.out.println("已发送日志");
             }
 
             @Override

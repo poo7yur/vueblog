@@ -54,7 +54,8 @@ public class AssessLogAspect {
 
         try {
             Object result = joinPoint.proceed();
-            logEntity.setResult(result);
+            String resultJson = JSONObject.toJSONString(result);
+            logEntity.setResult(resultJson);
             logEventMapper.saveAccessLog(logEntity);
             return result;
         } catch (Exception e) {
@@ -65,12 +66,12 @@ public class AssessLogAspect {
             rocketMQTemplate.asyncSend(TOPIC, logEntity, new SendCallback() {
                 @Override
                 public void onSuccess(SendResult sendResult) {
-                    log.debug("AccessLog sent ok");
+                    System.out.println("AccessLog sent ok");
                 }
 
                 @Override
                 public void onException(Throwable e) {
-                    log.error("AccessLog sent fail", e);
+                    System.out.println("AccessLog sent fail");
                 }
             });
         }
@@ -91,7 +92,6 @@ public class AssessLogAspect {
         Map<String, String[]> urlParams = request.getParameterMap();
         // 将参数放入map，如果是数组则转为字符串
         urlParams.forEach((k, v) -> map.put(k, v.length == 1 ? v : Arrays.toString(v)));
-
         // 2. 获取方法参数 (POST Body 或 方法入参)
         Object[] args = joinPoint.getArgs();
 

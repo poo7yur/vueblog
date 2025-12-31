@@ -37,4 +37,6 @@ minio:
   access-key: minio
   secret-key: Minio@123
   bucket: 264
-
+server:
+  tomcat:
+    max-swallow-size: 10MB
