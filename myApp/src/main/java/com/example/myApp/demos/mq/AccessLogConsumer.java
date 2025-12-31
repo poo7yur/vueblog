@@ -9,8 +9,8 @@ import org.springframework.stereotype.Component;
 
 @Component
 @RocketMQMessageListener(
-        consumerGroup = "access-log-consumer",
         topic = "access-log-topic",
+        consumerGroup = "access-log-consumer",
         messageModel = MessageModel.CLUSTERING
 )
 public class AccessLogConsumer implements RocketMQListener<LogEntity> {

@@ -4,8 +4,6 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-import java.util.Map;
-
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
@@ -17,7 +15,7 @@ public class LogEntity {
     private String loginUser;
     private String uri;
     private String method;
-    private Map<String, Object> params;
+    private String params;
     private Object result;
     private Long accessTime;
 }

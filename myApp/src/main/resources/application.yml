@@ -32,4 +32,9 @@ rocketmq:
 
 mybatis:
   mapper-locations: classpath:mapper/*.xml
+minio:
+  endpoint: http://192.168.146.100:9000
+  access-key: minio
+  secret-key: Minio@123
+  bucket: 264
 

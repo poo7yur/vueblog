@@ -4,4 +4,10 @@
     <insert id="saveLogEvent">
         insert into log_event(message ,level ,timestp) values (#{event.message} ,#{event.level} ,#{event.timestp})
     </insert>
+
+    <insert id="saveAccessLog">
+        insert into t_log(module ,description ,ip ,login_user ,uri ,method ,params ,result ,access_time) values
+        (#{log.module} ,#{log.description} ,#{log.ip} ,#{log.loginUser} ,#{log.uri} ,#{log.method} ,#{log.params} ,#{log.result} ,#{log.accessTime})
+    </insert>
+
 </mapper>

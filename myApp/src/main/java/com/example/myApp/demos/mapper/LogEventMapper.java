@@ -1,5 +1,6 @@
 package com.example.myApp.demos.mapper;
 
+import com.example.myApp.demos.entity.LogEntity;
 import com.example.myApp.demos.entity.LogEvent;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
@@ -8,5 +9,7 @@ import org.apache.ibatis.annotations.Param;
 public interface LogEventMapper {
 
     void saveLogEvent(@Param("event") LogEvent event);
+
+    void saveAccessLog(@Param("log") LogEntity log);
 
 }
