@@ -1,0 +1,117 @@
+ {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Microsoft YaHei', sans-serif;
+    background-color: #f4f4f4;
+    color: #333;
+}
+
+header {
+    background: #333;
+    color: #fff;
+    text-align: center;
+    padding: 1rem;
+}
+
+.container {
+    display: flex;
+    min-height: calc(100vh - 60px); /* 减去头部高度 */
+}
+
+.sidebar {
+    width: 250px;
+    background: #2c3e50;
+    color: #ecf0f1;
+    padding: 1rem;
+    overflow-y: auto;
+}
+
+.sidebar ul {
+    list-style: none;
+}
+
+.sidebar li {
+    margin: 0.5rem 0;
+    cursor: pointer;
+    padding: 0.5rem;
+    border-radius: 4px;
+    transition: background 0.2s;
+}
+
+.sidebar li:hover {
+    background: #34495e;
+}
+
+/* 树状菜单控制按钮样式 */
+.toggle {
+    display: block;
+    cursor: pointer;
+    padding: 0.3rem;
+    background: #34495e;
+    border-radius: 4px;
+    margin-bottom: 0.3rem;
+}
+
+.content {
+    flex: 1;
+    padding: 2rem;
+    background: #fff;
+    overflow-y: auto;
+}
+
+/* 图片网格布局 */
+.image-grid img:hover {
+    transform: scale(1.05);
+}
+
+.image-grid {
+    display: grid;
+    /* 自动填充，每张图至少 200px 宽 */
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 15px;
+    margin-top: 20px;
+}
+
+.image-item {
+    text-align: center;
+}
+
+.image-grid img {
+    width: 100%;
+    height: 150px; /* 固定高度 */
+    object-fit: cover; /* 保持比例裁剪填充，防止图片变形 */
+    border-radius: 8px;
+    cursor: pointer;
+    transition: transform 0.2s;
+}
+
+
+/* 缩略图列表样式 */
+.thumbnail-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 15px;
+    margin-top: 20px;
+}
+
+.thumbnail-item {
+    text-align: center;
+    flex: 1 1 150px;
+}
+
+.thumbnail-item img {
+    width: 100%;
+    height: 120px;
+    object-fit: cover;
+    border-radius: 8px;
+    cursor: pointer;
+    border: 2px solid #ddd;
+}
+
+.thumbnail-item img:hover {
+    border-color: #3498db;
+}

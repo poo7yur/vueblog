@@ -1,0 +1,61 @@
+<assembly xmlns="http://maven.apache.org/ASSEMBLY/2.1.0"
+          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+          xsi:schemaLocation="http://maven.apache.org/ASSEMBLY/2.1.0 http://maven.apache.org/xsd/assembly-2.1.0.xsd">
+
+    <!-- 装配ID（可自定义，此处不影响最终zip包名称，因为pom中已关闭appendAssemblyId） -->
+    <id>dist</id>
+    <!-- 打包格式：zip（支持tar、tar.gz等，此处需求为zip） -->
+    <formats>
+        <format>zip</format>
+    </formats>
+    <!-- 解压zip后，所有文件都放在一个根目录下（避免文件散落） -->
+    <includeBaseDirectory>true</includeBaseDirectory>
+    <baseDirectory>${project.artifactId}-${project.version}</baseDirectory>
+
+    <!-- 定义要包含的文件/目录（核心：配置lib、conf、bin三个目录） -->
+    <fileSets>
+        <!-- 1. 配置bin目录：复制项目src/main/bin下的启动/停止脚本到zip包的bin目录 -->
+        <fileSet>
+            <directory>src/main/bin</directory> <!-- 源码中的脚本目录 -->
+            <outputDirectory>bin</outputDirectory> <!-- zip包中的输出目录 -->
+            <includes>
+                <include>**/*</include> <!-- 包含bin目录下所有文件（.sh、.bat） -->
+            </includes>
+            <!-- 给.sh脚本添加可执行权限（Linux环境必需） -->
+            <fileMode>0755</fileMode>
+        </fileSet>
+
+        <!-- 2. 配置conf目录：复制项目src/main/resources下的配置文件到zip包的conf目录 -->
+        <fileSet>
+            <directory>src/main/resources</directory> <!-- 源码中的配置文件目录 -->
+            <outputDirectory>conf</outputDirectory> <!-- zip包中的输出目录 -->
+            <includes>
+                <!-- 包含所有配置文件，可根据需求筛选（如只包含yml/properties） -->
+                <include>application*.yml</include>
+                <include>application*.properties</include>
+                <include>bootstrap*.yml</include>
+                <include>logback.xml</include> <!-- 日志配置文件（如有） -->
+            </includes>
+            <fileMode>0644</fileMode> <!-- 配置文件权限，只读即可 -->
+        </fileSet>
+
+        <!-- 3. 配置lib目录：复制项目构建后的jar包和所有依赖包到zip包的lib目录 -->
+        <fileSet>
+            <directory>${project.build.directory}</directory> <!-- maven构建后的目标目录（target） -->
+            <outputDirectory>lib</outputDirectory> <!-- zip包中的输出目录 -->
+            <includes>
+                <include>${project.artifactId}-${project.version}.jar</include> <!-- 项目自身jar -->
+            </includes>
+        </fileSet>
+
+    </fileSets>
+    <!-- 4. 配置lib目录：复制项目的第三方依赖包到zip包的lib目录 -->
+    <dependencySets>
+        <dependencySet>
+            <outputDirectory>lib</outputDirectory> <!-- 依赖包输出到zip包的lib目录 -->
+            <useProjectArtifact>false</useProjectArtifact> <!-- 不重复包含项目自身jar -->
+            <unpack>false</unpack> <!-- 依赖包不解压，直接复制原jar -->
+            <scope>runtime</scope> <!-- 仅包含运行时依赖（排除编译/测试依赖） -->
+        </dependencySet>
+    </dependencySets>
+</assembly>

@@ -1,7 +1,6 @@
 package com.example.myApp.demos.service.impl;
 
 import com.example.myApp.demos.service.FileOptService;
-import com.sun.deploy.net.URLEncoder;
 import io.minio.*;
 import io.minio.http.Method;
 import lombok.Data;
@@ -14,6 +13,7 @@ import org.springframework.web.multipart.MultipartFile;
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.io.InputStream;
+import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.Map;
