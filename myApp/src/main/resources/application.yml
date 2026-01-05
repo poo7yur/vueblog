@@ -1,10 +1,15 @@
 spring:
   application:
     name: myApp
+  redis:
+    host: 192.168.146.100
+    port: 6379
+    password:
+    database: 0
   datasource:
     type: com.alibaba.druid.pool.DruidDataSource
     driver-class-name: com.mysql.cj.jdbc.Driver
-    url: jdbc:mysql://172.16.161.40:3306/demo?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true
+    url: jdbc:mysql://127.0.0.1:3306/demo?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true
     username: root
     password: root
     druid:

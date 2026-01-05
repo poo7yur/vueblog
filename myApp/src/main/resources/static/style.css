@@ -1,117 +1,268 @@
  {
-    margin: 0;
-    padding: 0;
-    box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
 }
 
 body {
-    font-family: 'Microsoft YaHei', sans-serif;
-    background-color: #f4f4f4;
-    color: #333;
+  font-family: "Microsoft YaHei", sans-serif;
+  background-color: #f4f4f4;
+  color: #333;
 }
 
 header {
-    background: #333;
-    color: #fff;
-    text-align: center;
-    padding: 1rem;
+  background: #333;
+  color: #fff;
+  text-align: center;
+  padding: 1rem;
 }
 
 .container {
-    display: flex;
-    min-height: calc(100vh - 60px); /* 减去头部高度 */
+  display: flex;
+  min-height: calc(100vh - 60px); /* 减去头部高度 */
 }
 
 .sidebar {
-    width: 250px;
-    background: #2c3e50;
-    color: #ecf0f1;
-    padding: 1rem;
-    overflow-y: auto;
+  width: 250px;
+  background: #2c3e50;
+  color: #ecf0f1;
+  padding: 1rem;
+  overflow-y: auto;
 }
 
 .sidebar ul {
-    list-style: none;
+  list-style: none;
 }
 
 .sidebar li {
-    margin: 0.5rem 0;
-    cursor: pointer;
-    padding: 0.5rem;
-    border-radius: 4px;
-    transition: background 0.2s;
+  margin: 0.5rem 0;
+  cursor: pointer;
+  padding: 0.5rem;
+  border-radius: 4px;
+  transition: background 0.2s;
 }
 
 .sidebar li:hover {
-    background: #34495e;
+  background: #34495e;
 }
 
 /* 树状菜单控制按钮样式 */
 .toggle {
-    display: block;
-    cursor: pointer;
-    padding: 0.3rem;
-    background: #34495e;
-    border-radius: 4px;
-    margin-bottom: 0.3rem;
+  display: block;
+  cursor: pointer;
+  padding: 0.3rem;
+  background: #34495e;
+  border-radius: 4px;
+  margin-bottom: 0.3rem;
 }
 
 .content {
-    flex: 1;
-    padding: 2rem;
-    background: #fff;
-    overflow-y: auto;
+  flex: 1;
+  padding: 2rem;
+  background: #fff;
+  overflow-y: auto;
 }
 
 /* 图片网格布局 */
 .image-grid img:hover {
-    transform: scale(1.05);
+  transform: scale(1.05);
 }
 
 .image-grid {
-    display: grid;
-    /* 自动填充，每张图至少 200px 宽 */
-    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-    gap: 15px;
-    margin-top: 20px;
+  display: grid;
+  /* 自动填充，每张图至少 200px 宽 */
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 15px;
+  margin-top: 20px;
 }
 
 .image-item {
-    text-align: center;
+  text-align: center;
 }
 
 .image-grid img {
-    width: 100%;
-    height: 150px; /* 固定高度 */
-    object-fit: cover; /* 保持比例裁剪填充，防止图片变形 */
-    border-radius: 8px;
-    cursor: pointer;
-    transition: transform 0.2s;
+  width: 100%;
+  height: 150px; /* 固定高度 */
+  object-fit: cover; /* 保持比例裁剪填充，防止图片变形 */
+  border-radius: 8px;
+  cursor: pointer;
+  transition: transform 0.2s;
 }
-
 
 /* 缩略图列表样式 */
 .thumbnail-list {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 15px;
-    margin-top: 20px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 15px;
+  margin-top: 20px;
 }
 
 .thumbnail-item {
-    text-align: center;
-    flex: 1 1 150px;
+  text-align: center;
+  flex: 1 1 150px;
 }
 
 .thumbnail-item img {
-    width: 100%;
-    height: 120px;
-    object-fit: cover;
-    border-radius: 8px;
-    cursor: pointer;
-    border: 2px solid #ddd;
+  width: 100%;
+  height: 120px;
+  object-fit: cover;
+  border-radius: 8px;
+  cursor: pointer;
+  border: 2px solid #ddd;
 }
 
 .thumbnail-item img:hover {
-    border-color: #3498db;
+  border-color: #3498db;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  list-style: none;
+  text-decoration: none;
+}
+
+/* 用户盒子：用于定位图标和下拉菜单 */
+.user-box {
+  position: relative; /* 作为下拉菜单的定位容器 */
+}
+
+/* 用户图标样式 */
+.user-icon {
+  position: absolute;
+  top: 1rem;
+  right: 0;
+  font-size: 1.8rem;
+  color: #6c757d;
+  cursor: pointer; /* 鼠标悬浮显示手型，提示可点击 */
+  transition: color 0.3s ease; /* 颜色过渡动画，提升体验 */
+}
+
+.user-icon:hover {
+  color: #007bff; /* 悬浮时变色，增强交互反馈 */
+}
+
+/* 用户下拉菜单样式（竖列四行） */
+.user-menu {
+  /* 核心：默认隐藏，绝对定位实现下拉效果 */
+  display: none;
+  position: absolute;
+  background-color: transparent;
+  top: calc(100% + 0.95rem); /* 位于图标下方，留出少量间距 */
+  right: 0; /* 右对齐，贴合图标 */
+  width: 100px; /* 固定宽度，保证菜单整齐 */
+  border: 1px solid #e9ecef;
+  border-radius: 4px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1); /* 阴影提升层次感 */
+  z-index: 999; /* 确保菜单在最上层，不被其他元素遮挡 */
+}
+
+/* 菜单列表项样式（实现竖列排版） */
+.user-menu li {
+  border-bottom: 1px solid #f8f9fa; /* 分割线，区分四行选项 */
+}
+
+/* 最后一个列表项去掉底部分割线 */
+.user-menu li:last-child {
+  border-bottom: none;
+}
+
+/* 菜单链接样式 */
+.user-menu li a {
+  display: block; /* 块级元素，点击区域铺满整行 */
+  padding: 0.8rem 1rem;
+  color: #333;
+  transition: background-color 0.3s ease;
+}
+
+.user-menu li a:hover {
+  background-color: #f8f9fa; /* 悬浮时高亮背景 */
+}
+
+/* 菜单显示的激活类（通过JS添加/移除） */
+.user-menu.active {
+  display: block;
+}
+
+/*登录弹出的样式*/
+.login-modal-mask {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.3);
+  display: none; /* 默认隐藏遮罩 */
+  justify-content: center;
+  align-items: center;
+  z-index: 999;
+}
+
+.login-modal {
+  width: 350px;
+  background: #fff;
+  border-radius: 8px;
+  padding: 24px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+}
+
+.login-modal h3 {
+  margin: 0 0 20px 0;
+  text-align: center;
+  color: #333;
+}
+
+.login-form-item {
+  margin-bottom: 16px;
+}
+
+.login-form-item label {
+  display: block;
+  margin-bottom: 8px;
+  color: #666;
+  font-size: 14px;
+}
+
+.login-form-item input {
+  width: 100%;
+  height: 40px;
+  padding: 0 12px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  box-sizing: border-box;
+  font-size: 14px;
+}
+
+.login-form-item input:focus {
+  outline: none;
+  border-color: #1890ff;
+}
+
+.login-btn {
+  width: 100%;
+  height: 44px;
+  background: #1890ff;
+  color: #fff;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 16px;
+  margin-top: 8px;
+}
+
+.login-btn:hover {
+  background: #096dd9;
+}
+
+.close-modal {
+  text-align: center;
+  margin-top: 16px;
+  color: #666;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.close-modal:hover {
+  color: #1890ff;
 }

@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.example.myApp.demos.mapper.UserMapper">
+    <insert id="addUser">
+        insert into t_user(user_id ,name ,password ,email ,salt ,phone ,create_time) values (#{user.userId} ,#{user.name} ,#{user.password} ,#{user.email} ,#{user.salt} ,#{user.phone} ,now())
+    </insert>
+
+    <select id="findUser" resultType="com.example.myApp.demos.entity.User">
+        select * from t_user where name =#{name} and status =0
+    </select>
+
+</mapper>
