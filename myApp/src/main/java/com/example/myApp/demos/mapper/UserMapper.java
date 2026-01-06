@@ -4,11 +4,15 @@ import com.example.myApp.demos.entity.User;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 
+import java.util.Set;
+
 @Mapper
 public interface UserMapper {
 
     User findUser(@Param("name") String username);
 
     void addUser(@Param("user") User user);
+
+    Set<String> queryNames();
 
 }

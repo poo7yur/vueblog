@@ -6,4 +6,9 @@ public class Constants {
     public static final String USER_NOT_FIND = "用户未找到";
 
     public static final String PWD_NAME_ERROR ="用户名密码错误";
+
+    public static final String MSG_NOT_SUBSCRIBE = "未订阅消息";
+
+    public static final String USED_NAME = "名称已被使用";
+
 }

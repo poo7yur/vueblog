@@ -16,5 +16,5 @@ public class User {
     private Date createTime;
     private String role;
     private int status;
-
+    private double defaultMb;
 }

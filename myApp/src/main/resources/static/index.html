@@ -21,27 +21,73 @@
         <ul class="user-menu" id="userMenu">
             <li><a href="#login" id="loginLink">登录</a></li>
             <li><a href="#register" id="registerLink">注册</a></li>
-            <li><a href="#space">空间</a></li>
-            <li><a href="#msg">消息</a></li>
+            <li><a href="#space" id="spaceLink">空间</a></li>
+            <li><a href="#msg" id="msgLink">消息</a></li>
         </ul>
     </div>
 </header>
+
+<!-- 消息弹窗 -->
+<div class="msg-modal" id="msgModal">
+    <div class="msg-modal-content">
+        <span class="close-btn" id="closeMsgModal">&times;</span>
+        <h2>消息列表</h2>
+        <table id="msgTable">
+            <thead>
+            <tr>
+                <th>消息ID</th>
+                <th>内容</th>
+                <th>时间</th>
+                <th>状态</th>
+                <th>创建者</th>
+                <th>群组ID</th>
+                <th>类型</th>
+            </tr>
+            </thead>
+            <tbody id="msgTableBody"></tbody>
+        </table>
+    </div>
+</div>
+
+<!-- 注册悬浮弹窗（默认隐藏） -->
+<div class="register-modal-mask" id="registerModalMask">
+    <div class="register-modal">
+        <h3>用户注册</h3>
+        <div class="register-form-item">
+            <label for="regUsername">用户名</label>
+            <input type="text" id="regUsername" placeholder="请输入用户名">
+        </div>
+        <div class="register-form-item">
+            <label for="regPassword">密码</label>
+            <input type="password" id="regPassword" placeholder="请输入密码">
+        </div>
+        <div class="register-form-item">
+            <label for="regEmail">邮箱</label>
+            <input type="email" id="regEmail" placeholder="请输入邮箱">
+        </div>
+        <div class="register-form-item">
+            <label for ="regPhone">手机号</label>
+            <input type="text" id="regPhone" placeholder="请输入手机号">
+        </div>
+        <button class="register-btn" id="registerBtn">注册</button>
+    </div>
+</div>
 
 <!-- 登录悬浮弹窗（默认隐藏） -->
 <div class="login-modal-mask" id="loginModalMask">
     <div class="login-modal">
         <h3>用户登录</h3>
         <div class="login-form-item">
-            <label for="username">用户名</label>
-            <input type="text" id="username" placeholder="请输入用户名" value="adm">
+             <label for="username">用户名</label>
+             <input type="text" id="username" placeholder="请输入用户名" value="adm">
         </div>
         <div class="login-form-item">
-            <label for="password">密码</label>
-            <input type="password" id="password" placeholder="请输入密码" value="adm">
+             <label for="password">密码</label>
+             <input type="password" id="password" placeholder="请输入密码" value="adm">
         </div>
         <button class="login-btn" id="loginBtn">登录</button>
         <div class="close-modal" id="closeModal">取消</div>
-    </div>
+   </div>
 </div>
 
 <div class="container">

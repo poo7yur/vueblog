@@ -6,6 +6,56 @@ document.addEventListener("DOMContentLoaded", function () {
   fetchData();
 });
 
+/*拦截每个请求 请求头放上token*/
+function getToken() {
+  // 按你项目实际存储位置来：
+  // localStorage / sessionStorage / cookie / indexedDB …
+  return localStorage.getItem("userToken") || "";
+}
+
+const originalFetch = window.fetch;
+window.fetch = function (url, opts = {}) {
+  // 保证 headers 存在且是 Headers 实例
+  const headers = new Headers(opts.headers || {});
+  // 塞 token（没有就空串）
+  headers.set("token", getToken());
+
+  return originalFetch(url, {
+    ...opts,
+    headers,
+  });
+};
+
+/* 拦截原生 XMLHttpRequest*/
+const originalOpen = XMLHttpRequest.prototype.open;
+const originalSetRequestHeader = XMLHttpRequest.prototype.setRequestHeader;
+
+XMLHttpRequest.prototype.open = function (method, url, async, user, password) {
+  // 先保存真正的 open 参数，后面要用
+  this._url = url;
+  this._method = method;
+  // 给当前实例打一个标记，表示我们还没塞 token
+  this._tokenAdded = false;
+  return originalOpen.apply(this, arguments);
+};
+
+XMLHttpRequest.prototype.setRequestHeader = function (header, value) {
+  // 如果业务自己写了 token，就尊重它
+  if (header.toLowerCase() === "token") {
+    this._tokenAdded = true;
+  }
+  return originalSetRequestHeader.call(this, header, value);
+};
+
+// 在 send 时统一补 token（保证是最后一步）
+const originalSend = XMLHttpRequest.prototype.send;
+XMLHttpRequest.prototype.send = function (body) {
+  if (!this._tokenAdded) {
+    originalSetRequestHeader.call(this, "token", getToken());
+  }
+  return originalSend.call(this, body);
+};
+
 // 1. 获取目录树数据
 function fetchData() {
   fetch("/scanner")
@@ -63,7 +113,7 @@ function renderTree(node, container) {
   container.appendChild(ul);
 }
 
-// 3. 加载并显示图片 (核心修改部分)
+// 3. 加载并显示图片
 function loadFolder(folderPath) {
   const contentArea = document.getElementById("contentArea");
   contentArea.innerHTML = "<p>加载中...</p>";
@@ -119,7 +169,6 @@ function renderImageGrid(filePathList) {
     }
   });
 
-  // 2. 生成 HTML
   // 使用 CSS Grid 进行平铺布局
   let html = `<div class="image-grid">`;
   webPathList.forEach((src) => {
@@ -139,11 +188,11 @@ function openImage(src) {
   window.open(src, "_blank");
 }
 
-// 1. 获取DOM元素
+// 获取DOM元素
 const userIcon = document.getElementById("userIcon");
 const userMenu = document.getElementById("userMenu");
 
-// 2. 给用户图标添加点击事件（切换菜单显示/隐藏）
+// 给用户图标添加点击事件（切换菜单显示/隐藏）
 userIcon.addEventListener("click", function (e) {
   // 阻止事件冒泡（避免触发document的点击事件，导致菜单刚显示就隐藏）
   e.stopPropagation();
@@ -151,13 +200,13 @@ userIcon.addEventListener("click", function (e) {
   userMenu.classList.toggle("active");
 });
 
-// 3. 给document添加点击事件（点击其他地方隐藏菜单）
+// 给document添加点击事件（点击其他地方隐藏菜单）
 document.addEventListener("click", function () {
   // 移除active类，隐藏菜单
   userMenu.classList.remove("active");
 });
 
-// 4. 给菜单本身添加点击事件（阻止事件冒泡，避免点击菜单项时菜单隐藏）
+//  给菜单本身添加点击事件（阻止事件冒泡，避免点击菜单项时菜单隐藏）
 userMenu.addEventListener("click", function (e) {
   e.stopPropagation();
 });
@@ -170,25 +219,18 @@ const loginBtn = document.getElementById("loginBtn");
 const usernameInput = document.getElementById("username");
 const passwordInput = document.getElementById("password");
 
-// 打开登录弹窗（点击登录链接）
+//打开登录弹窗（点击登录链接）
 loginLink.addEventListener("click", (e) => {
   // 阻止锚点跳转（#login）
   e.preventDefault();
   // 隐藏用户菜单，显示登录弹窗
-//  userMenu.style.display = "none";
+  //  userMenu.style.display = "none";
   loginModalMask.style.display = "flex";
 });
 
 // 关闭登录弹窗（点击取消/遮罩）
 closeModal.addEventListener("click", () => {
   loginModalMask.style.display = "none";
-});
-
-loginModalMask.addEventListener("click", (e) => {
-  // 点击遮罩层（非弹窗内容）关闭弹窗
-  if (e.target === loginModalMask) {
-    loginModalMask.style.display = "none";
-  }
 });
 
 // 核心：提交登录请求，获取并存储Token
@@ -205,7 +247,7 @@ loginBtn.addEventListener("click", async () => {
 
   try {
     // （2）发送POST登录请求（与后端接口一致）
-    const response = await fetch("http://127.0.0.1:8081/login", {
+    const response = await fetch("/login", {
       method: "POST",
       headers: {
         "Content-Type": "application/json", // 与postman一致
@@ -223,18 +265,21 @@ loginBtn.addEventListener("click", async () => {
     }
 
     const result = await response.json(); // 解析后端返回的JSON数据
-    const token = result.token; // 提取Token（假设后端返回格式：{ "token": "xxx.yyy.zzz" }）
+    const token = result.data.token; // 提取Token（假设后端返回格式：{ "token": "xxx.yyy.zzz" }）
+    const userId = result.data.userId;
 
     // （4）存储Token（两种常用方式，按需选择）
     // 方式1：localStorage - 持久化存储（关闭浏览器后仍存在，需手动清除）
     localStorage.setItem("userToken", token);
+    localStorage.setItem("currentUser", username);
+    localStorage.setItem("currentUserId", userId);
     // 方式2：sessionStorage - 会话级存储（关闭浏览器/标签页后消失，更安全）
     // sessionStorage.setItem('userToken', token);
 
-    alert("登录成功！Token已存储");
+    //alert("登录成功！Token已存储");
     loginModalMask.style.display = "none"; // 关闭弹窗
     // 关键：登录成功后调用视图更新函数
-    updateUserView(username);
+    updateUserView(username, userId);
   } catch (error) {
     console.error("登录异常：", error);
     alert("登录失败：" + error.message);
@@ -242,7 +287,7 @@ loginBtn.addEventListener("click", async () => {
 });
 
 /*更新用户视图*/
-function updateUserView(username) {
+function updateUserView(username, userId) {
   // 4.1 修改userIcon的title为当前用户名（鼠标悬浮显示）
   userIcon.setAttribute("title", username);
 
@@ -254,6 +299,11 @@ function updateUserView(username) {
 
   // 4.3 隐藏「登录」选项（登录后无需再显示登录）
   loginLink.parentElement.style.display = "none";
+
+  // 4.4 存储 userId（后续调用消息接口需要）
+  if (userId) {
+    localStorage.setItem("currentUserId", userId);
+  }
 }
 
 /*页面初始化：判断是否已登录，恢复视图状态（避免刷新页面后还原）*/
@@ -263,6 +313,193 @@ window.onload = function () {
 
   // 若存在有效Token和用户名，自动更新视图
   if (currentUser && userToken) {
-    updateUserView(currentUser);
+    updateUserView(currentUser, localStorage.getItem("currentUserId"));
   }
 };
+
+// 监听注册链接点击事件
+document.getElementById("registerLink").addEventListener("click", function (e) {
+  e.preventDefault();
+  document.getElementById("registerModalMask").style.display = "flex";
+});
+
+// 监听注册按钮点击事件
+document.getElementById("registerBtn").addEventListener("click", function () {
+  const username = document.getElementById("regUsername").value;
+  const password = document.getElementById("regPassword").value;
+  const email = document.getElementById("regEmail").value;
+  const phone = document.getElementById("regPhone").value;
+
+  // 发送 POST 请求
+  fetch("/addUser", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      name: username,
+      email: email,
+      password: password,
+      phone: phone,
+    }),
+  })
+    .then((response) => response.json())
+    .then((data) => {
+      alert("注册成功！");
+      document.getElementById("registerModalMask").style.display = "none";
+      // 注册成功后调用视图更新函数
+      updateUserView(username);
+    })
+    .catch((error) => {
+      console.error("Error:", error);
+      alert("注册失败，请重试！");
+    });
+});
+
+/*消息弹窗交互*/
+msgLink.addEventListener("click", async (e) => {
+  e.preventDefault(); // 阻止锚点跳转
+  userMenu.style.display = "none"; // 先隐藏下拉菜单
+
+  // 第一步：验证登录状态（是否有 Token 和 userId）
+  const userToken = localStorage.getItem("userToken");
+  const currentUserId = localStorage.getItem("currentUserId");
+  if (!userToken || !currentUserId) {
+    alert("请先登录后再查看消息！");
+    loginModalMask.style.display = "flex"; // 直接弹出登录框
+    return;
+  }
+
+  // 第二步：打开消息弹窗并加载数据
+  msgModal.style.display = "flex";
+  await fetchMessages();
+});
+
+// 6.2 点击关闭按钮/弹窗遮罩关闭弹窗
+closeMsgModal.addEventListener("click", () => {
+  msgModal.style.display = "none";
+  location.reload();
+});
+msgModal.addEventListener("click", (e) => {
+  if (e.target === msgModal) {
+    msgModal.style.display = "none";
+  }
+});
+
+//调接口拉取数据
+function fetchMessages() {
+  fetch("/getMsg", {
+    headers: {
+      userId: localStorage.getItem("currentUserId"),
+    },
+  })
+    .then((response) => response.json())
+    .then((data) => {
+      if (data.code === 0) {
+        renderMessages(data.data);
+      } else {
+        showErrorMessage(data.msg);
+      }
+    })
+    .catch((error) => console.error("Error:", error));
+}
+
+//渲染消息表格
+function renderMessages(messages) {
+  const tableBody = document.getElementById("msgTableBody");
+  tableBody.innerHTML = "";
+  messages.forEach((msg) => {
+    const row = document.createElement("tr");
+    row.innerHTML = `
+            <td>${msg.msgId}</td>
+            <td>${msg.msgContent}</td>
+            <td>${msg.updateTime}</td>
+            <td>${msg.state}</td>
+            <td>${msg.createBy}</td>
+            <td>${msg.groupId}</td>
+            <td>${msg.msgType}</td>
+        `;
+    tableBody.appendChild(row);
+  });
+}
+
+// 显示红色提示消息的函数
+function showErrorMessage(msg) {
+  // 1. 创建一个 div 元素作为提示框
+  const msgBox = document.createElement("div");
+
+  // 2. 设置样式（红色文字、居中、背景、位置等）
+  msgBox.style.cssText = `
+        position: fixed;
+        top: 20px;
+        left: 50%;
+        transform: translateX(-50%);
+        background-color: #ffebee; /* 浅红色背景 */
+        color: #c62828;            /* 深红色文字 */
+        padding: 10px 20px;
+        border: 1px solid #ef9a9a;
+        border-radius: 4px;
+        font-size: 18px;
+        z-index: 1000;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+        transition: opacity 0.5s ease; /* 添加淡出效果 */
+    `;
+
+  // 3. 设置显示的内容
+  msgBox.textContent = msg;
+
+  // 4. 将提示框添加到页面 body 中
+  document.body.appendChild(msgBox);
+
+  // 5. 设置 2 秒后自动消失（淡出并移除）
+  setTimeout(() => {
+    msgBox.style.opacity = "0";
+    setTimeout(() => {
+      if (msgBox.parentNode) {
+        document.body.removeChild(msgBox);
+      }
+    }, 500); // 等待淡出动画结束再移除
+  }, 2000);
+}
+
+/*我的空间*/
+const spaceLink = document.getElementById("spaceLink");
+// 绑定点击事件
+spaceLink.addEventListener("click", async function (e) {
+  e.preventDefault(); // 阻止a标签默认跳转
+
+  // 校验登录状态：判断localStorage是否存在用户和token
+  const currentUser = localStorage.getItem("currentUser");
+  const userToken = localStorage.getItem("userToken");
+  if (!currentUser || !userToken) {
+    alert("请登录后查看我的空间");
+    return; // 未登录终止执行
+  }
+
+  // 已登录：请求后端文件夹数据接口
+  try {
+    const res = await fetch(
+      `/scanner?path=${currentUser}`,
+      {
+        method: "GET",
+        headers: {
+          token: userToken, // 携带token请求头
+          "Content-Type": "application/json",
+        },
+      }
+    );
+    const result = await res.json();
+
+    // 接口请求成功（code=0），跳转myspace.html并携带数据
+    if (result.code === 0) {
+      // 将数据转成字符串，通过URL参数传递（也可复用localStorage存储）
+      const spaceData = encodeURIComponent(JSON.stringify(result.data));
+      window.open(`myspace.html?data=${spaceData}`, "_blank"); // 新开标签页跳转
+    } else {
+      alert(`数据加载失败：${result.msg}`);
+    }
+  } catch (err) {
+    console.error("接口请求失败：", err);
+    alert("服务器连接失败，请稍后重试");
+  }
+});

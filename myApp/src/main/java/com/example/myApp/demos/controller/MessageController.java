@@ -1,21 +1,28 @@
 package com.example.myApp.demos.controller;
 
 import com.example.myApp.demos.aop.AccessLog;
+import com.example.myApp.demos.entity.MsgEntity;
 import com.example.myApp.demos.entity.OrderDto;
 import com.example.myApp.demos.entity.R;
 import com.example.myApp.demos.mq.MyLogger;
 import com.example.myApp.demos.service.FileOptService;
+import com.example.myApp.demos.service.LogEventService;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import javax.annotation.Resource;
+import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+import java.util.List;
 
 @RestController
 public class MessageController {
 
     @Resource
     private MyLogger myLogger;
+
+    @Resource
+    private LogEventService logEventService;
 
     @Resource
     private FileOptService fileOptService;
@@ -52,6 +59,16 @@ public class MessageController {
             fileOptService.downloadFile(fileId, fileName, response);
         } catch (Exception e) {
             throw new RuntimeException(e);
+        }
+    }
+
+    @GetMapping("/getMsg")
+    public R<List<MsgEntity>> getMsg(HttpServletRequest request) {
+        String userId = request.getHeader("userId");
+        try {
+            return R.ok(logEventService.getMsg(userId));
+        } catch (Exception e) {
+            return R.fail(e.getMessage());
         }
     }
 

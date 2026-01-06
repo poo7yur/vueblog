@@ -1,0 +1,695 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>我的空间</title>
+    <!-- 引入FontAwesome图标库 -->
+    <link
+      rel="stylesheet"
+      href="https://cdn.bootcdn.net/ajax/libs/font-awesome/6.4.0/css/all.min.css"
+    />
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+        list-style: none;
+      }
+      body {
+        font-family: "Microsoft YaHei", sans-serif;
+        background: #f5f5f5;
+      }
+
+      /* 顶部标题栏：标题 + 上传按钮 */
+      .header {
+        height: 60px;
+        background: #2c3e50;
+        color: #fff;
+        padding: 0 20px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+      .header h2 {
+        font-weight: normal;
+      }
+      #uploadBtn {
+        padding: 8px 16px;
+        background: #3498db;
+        border: none;
+        color: #fff;
+        border-radius: 4px;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+      }
+      #uploadBtn:hover {
+        background: #2980b9;
+      }
+
+      /* 主体布局：左侧树 + 右侧内容区 */
+      .container {
+        display: flex;
+        height: calc(100vh - 60px);
+      }
+      /* 左侧树形结构容器 */
+      .tree-box {
+        width: 280px;
+        background: #fff;
+        border-right: 1px solid #e0e0e0;
+        padding: 20px 0;
+        overflow-y: auto;
+      }
+      .tree-node {
+        padding: 6px 0;
+        cursor: pointer;
+        padding-left: 20px;
+        line-height: 28px;
+      }
+      .tree-node:hover {
+        background: #f0f9ff;
+      }
+      .tree-node.active {
+        color: #3498db;
+        font-weight: bold;
+      }
+      .tree-children {
+        padding-left: 20px;
+      }
+
+      /* 右侧文件夹/图片视图容器 */
+      .folder-view {
+        flex: 1;
+        padding: 30px;
+        overflow-y: auto;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 20px;
+      }
+      /* 文件夹卡片样式 */
+      .folder-card {
+        width: 120px;
+        height: 130px;
+        background: #fff;
+        border-radius: 6px;
+        text-align: center;
+        padding-top: 20px;
+        cursor: pointer;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+        transition: all 0.2s;
+      }
+      .folder-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+      }
+      .folder-card i {
+        font-size: 40px;
+        color: #f1c40f;
+        margin-bottom: 10px;
+      }
+      .folder-name {
+        font-size: 14px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+
+      /* 图片卡片样式（和文件夹卡片等宽等高，风格统一） */
+      .image-card {
+        width: 120px;
+        height: 130px;
+        border-radius: 6px;
+        text-align: center;
+        cursor: pointer;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+        transition: all 0.2s;
+        overflow: hidden;
+        position: relative;
+      }
+      .image-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+      }
+      .image-card img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover; /* 等比缩放，填充容器，不拉伸 */
+      }
+      .image-name {
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        background: rgba(0, 0, 0, 0.6);
+        color: #fff;
+        font-size: 12px;
+        padding: 3px 0;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+
+      /* 右键菜单样式（默认隐藏） */
+      .context-menu {
+        position: absolute;
+        width: 120px;
+        background: #fff;
+        border-radius: 4px;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.15);
+        display: none;
+        z-index: 9999;
+      }
+      .context-menu li {
+        padding: 8px 12px;
+        cursor: pointer;
+        font-size: 14px;
+      }
+      .context-menu li:hover {
+        background: #f0f0f0;
+      }
+      .context-menu li.disabled {
+        color: #999;
+        cursor: not-allowed;
+      }
+
+      /* 上传文件的隐藏input */
+      #fileInput {
+        display: none;
+      }
+      /* 空状态样式 */
+      .empty-tip {
+        color: #999;
+        font-size: 16px;
+        margin-top: 50px;
+        text-align: center;
+        width: 100%;
+      }
+    </style>
+  </head>
+  <body>
+    <!-- 顶部标题栏 -->
+    <div class="header">
+      <h2 id="pageTitle">我的空间</h2>
+      <button id="uploadBtn"><i class="fas fa-upload"></i> 上传图片</button>
+      <input
+        type="file"
+        id="fileInput"
+        accept="image/jpg,image/jpeg,image/png"
+        multiple
+      />
+    </div>
+
+    <!-- 主体布局 -->
+    <div class="container">
+      <!-- 左侧树形结构 -->
+      <div class="tree-box" id="treeBox"></div>
+      <!-- 右侧文件夹视图 -->
+      <div class="folder-view" id="folderView"></div>
+    </div>
+
+    <!-- 右键菜单 -->
+    <ul class="context-menu" id="contextMenu">
+      <li id="createFolder"><i class="fas fa-plus"></i> 新建文件夹</li>
+      <li id="deleteFolder"><i class="fas fa-trash"></i> 删除文件夹</li>
+    </ul>
+
+    <!-- 加载遮罩层 -->
+    <div class="loading-mask" id="loadingMask">
+      <div><i class="fas fa-spinner fa-spin"></i> 处理中...</div>
+    </div>
+
+    <script>
+      // ========== 全局变量 ==========
+      let spaceData = null; // 接口返回的完整文件夹数据
+      let currentNode = null; // 当前选中的节点数据
+      let currentPath = ""; // 当前文件夹的完整路径（用于上传/新建/加载图片）
+      const contextMenu = document.getElementById("contextMenu");
+      const treeBox = document.getElementById("treeBox");
+      const folderView = document.getElementById("folderView");
+      const uploadBtn = document.getElementById("uploadBtn");
+      const fileInput = document.getElementById("fileInput");
+      const pageTitle = document.getElementById("pageTitle");
+      const loadingMask = document.getElementById("loadingMask");
+
+      // ========== 页面初始化：解析URL参数，加载数据 ==========
+      init();
+      async function init() {
+        // 1. 获取URL中传递的空间数据
+        const searchParams = new URLSearchParams(window.location.search);
+        const dataStr = decodeURIComponent(searchParams.get("data") || "");
+        if (!dataStr) {
+          alert("数据加载失败，无权限访问");
+          window.close();
+          return;
+        }
+        spaceData = JSON.parse(dataStr);
+        pageTitle.textContent = `${spaceData.name}空间`; // 设置顶部标题
+        currentPath = spaceData.path; // 初始化当前路径为顶级adm路径
+
+        // 2. 渲染树形结构 + 渲染初始文件夹视图
+        renderTree(spaceData, treeBox);
+        renderFolderView(spaceData);
+
+        // 3. 绑定全局事件
+        bindEvents();
+      }
+
+      // ========== 核心方法1：递归渲染树形结构 ==========
+      function renderTree(node, parentDom) {
+        const nodeItem = document.createElement("div");
+        nodeItem.className = "tree-node";
+        nodeItem.dataset.path = node.path; // 存储节点路径
+        nodeItem.dataset.name = node.name; // 存储节点名称
+        nodeItem.innerHTML = `<i class="fas fa-folder"></i> ${node.name}`;
+
+        // 顶级节点（adm）标记，用于后续禁止删除
+        if (node.path === spaceData.path) nodeItem.dataset.isRoot = "true";
+
+        // 点击节点：选中+刷新文件夹视图
+        nodeItem.addEventListener("click", function () {
+          // 清除所有节点选中状态
+          document
+            .querySelectorAll(".tree-node")
+            .forEach((el) => el.classList.remove("active"));
+          this.classList.add("active"); // 标记当前节点为选中
+          currentNode = node; // 更新当前节点
+          currentPath = node.path; // 更新当前路径
+          renderFolderView(node); // 刷新视图
+        });
+
+        // 右键节点：显示右键菜单
+        nodeItem.addEventListener("contextmenu", function (e) {
+          e.preventDefault(); // 阻止浏览器默认右键菜单
+          // 定位右键菜单位置
+          contextMenu.style.left = `${e.clientX}px`;
+          contextMenu.style.top = `${e.clientY}px`;
+          contextMenu.style.display = "block";
+          // 存储当前右键的节点
+          window.rightClickNode = node;
+          // 顶级节点禁止删除
+          document.getElementById("deleteFolder").className =
+            node.path === spaceData.path ? "disabled" : "";
+        });
+
+        parentDom.appendChild(nodeItem);
+
+        // 递归渲染子节点
+        if (node.children && node.children.length > 0) {
+          const childrenDom = document.createElement("div");
+          childrenDom.className = "tree-children";
+          parentDom.appendChild(childrenDom);
+          node.children.forEach((child) => renderTree(child, childrenDom));
+        }
+      }
+
+      // ========== 核心方法2：渲染文件夹/图片视图（核心升级） ==========
+      function renderFolderView(node) {
+        folderView.innerHTML = ""; // 清空原有内容
+
+        // ✅ 核心判断：有子文件夹 → 渲染文件夹；无子女 → 调用加载图片方法
+        if (node.children && node.children.length > 0) {
+          // 遍历子节点，渲染文件夹卡片
+          node.children.forEach((child) => {
+            const card = document.createElement("div");
+            card.className = "folder-card";
+            card.dataset.path = child.path;
+            card.dataset.name = child.name;
+            card.innerHTML = `
+                    <i class="fas fa-folder"></i>
+                    <div class="folder-name">${child.name}</div>
+                `;
+            // 点击文件夹卡片：刷新视图为子文件夹内容/加载图片
+            card.addEventListener("click", function () {
+              currentNode = child;
+              currentPath = child.path;
+              renderFolderView(child);
+              // 同步选中树形结构对应节点
+              document.querySelectorAll(".tree-node").forEach((el) => {
+                el.classList.remove("active");
+                if (el.dataset.path === child.path) el.classList.add("active");
+              });
+            });
+            folderView.appendChild(card);
+          });
+        } else {
+          // ✅ 无子女文件夹 → 调用方法加载当前文件夹下的图片
+          loadFolder(node.path);
+        }
+      }
+
+      function loadFolder(folderPath) {
+        const contentArea = document.getElementById("contentArea");
+        folderView.innerHTML = "<p>加载中...</p>";
+
+        // 准备 POST 请求的数据
+        const postData = {
+          path: folderPath,
+        };
+
+        fetch("/listImages", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(postData),
+        })
+          .then((response) => response.json())
+          .then((imgData) => {
+            if (imgData.code === 0 && Array.isArray(imgData.data)) {
+              renderImageGrid(imgData.data);
+            } else {
+              console.error("该文件夹为空或发生错误");
+            }
+          })
+          .catch((err) => {
+            folderView.innerHTML = `<p style="color:red">图片加载失败: ${err}</p>`;
+          });
+      }
+
+      function renderImageGrid(filePathList) {
+        const contentArea = document.getElementById("contentArea");
+
+        // 1. 转换路径：将磁盘全路径转换为 Web 访问路径
+        // 原始路径: C:\Users\Admin\Pictures\save\A\A02\image_2.jpg
+        // 目标路径: /static/A/A02/image_2.jpg
+        const baseUrl = "/static/";
+        const webPathList = filePathList.map((fullPath) => {
+          // 将 Windows 路径分隔符 \ 替换为 / (防止路径显示错误)
+          let webPath = fullPath.replace(/\\/g, "/");
+
+          // 关键步骤：截取 "save" 目录之后的部分，并拼接到 baseUrl 后面
+          // 假设后端映射的是 save 目录，所以我们需要去掉 "C:/Users/Admin/Pictures/save"
+          const saveIndex = webPath.indexOf("/save/");
+
+          if (saveIndex !== -1) {
+            // 从 '/save/' 之后开始截取，并拼接到 /static/ 后面
+            return baseUrl + webPath.substring(saveIndex + 6); // +6 是为了去掉 '/save/' 这6个字符
+          } else {
+            // 如果找不到 save，直接返回原路径（或者做其他容错处理）
+            return webPath;
+          }
+        });
+
+        // 使用 CSS Grid 进行平铺布局
+        let html = `<div class="image-grid">`;
+        webPathList.forEach((src) => {
+          html += `
+                <div class="image-item">
+                    <img src="${src}" onclick="openImage('${src}')">
+                </div>
+            `;
+        });
+        html += `</div>`;
+
+        folderView.innerHTML = html;
+      }
+
+      function openImage(src) {
+        window.open(src, "_blank");
+      }
+
+      // ========== ✅ 新增核心方法：加载图片（严格匹配指定接口） ==========
+      async function loadImages(folderPath) {
+        // 加载中占位（可选）
+        folderView.innerHTML =
+          '<div class="empty-tip"><i class="fas fa-spinner fa-spin"></i> 加载图片中...</div>';
+
+        try {
+          // 构造请求参数，严格按要求：POST + JSON格式 + {path: folderPath}
+          const postData = { path: folderPath };
+          const res = await fetch("/listImages", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              token: localStorage.getItem("userToken"), // 携带token校验登录
+            },
+            body: JSON.stringify(postData),
+          });
+
+          const result = await res.json();
+          folderView.innerHTML = ""; // 清空加载占位
+
+          // 接口请求成功
+          if (result.code === 0) {
+            const imageList = result.data || [];
+            // 有图片 → 渲染图片卡片；无图片 → 显示空提示
+            if (imageList.length > 0) {
+              imageList.forEach((imgPath) => {
+                const imageCard = createImageCard(imgPath);
+                folderView.appendChild(imageCard);
+              });
+            } else {
+              folderView.innerHTML =
+                '<div class="empty-tip"><i class="fas fa-image"></i> 该文件夹下暂无图片</div>';
+            }
+          } else {
+            folderView.innerHTML = `<div class="empty-tip"><i class="fas fa-exclamation-circle"></i> 图片加载失败：${result.msg}</div>`;
+          }
+        } catch (err) {
+          console.error("图片接口请求失败：", err);
+          folderView.innerHTML =
+            '<div class="empty-tip"><i class="fas fa-exclamation-circle"></i> 服务器连接失败，无法加载图片</div>';
+        }
+      }
+
+      // ========== 辅助方法：创建图片卡片（格式化路径+美化展示） ==========
+      function createImageCard(imgFullPath) {
+        const card = document.createElement("div");
+        card.className = "image-card";
+
+        // ✅ 提取图片文件名（如从 C:\xxx\image_1.jpg → 得到 image_1.jpg）
+        const imgName = imgFullPath.split(/[\\/]/).pop();
+        // ✅ 图片加载失败兜底：显示图片图标替代
+        const imgErrorSrc =
+          "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI0MCIgaGVpZ2h0PSI0MCIgdmlld0JveD0iMCAwIDI0IDI0IiBmaWxsPSJub25lIiBzdHJva2U9IiM5OTk5OTkiIHN0cm9rZS13aWR0aD0iMiIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIj48cGF0aCBkPSJNMjEgMTV2N2EyIDIgMCAwIDEtMiAyaC0xNmEyIDIgMCAwIDEtMi0yVjVhMiAyIDAgMCAxIDItMmg3Ij48L3BhdGg+PGxpbmUgeDE9IjE0IiB5MT0iMTIiIHgyPSIxNCIgeTI9IjE2Ij48L2xpbmU+PGxpbmUgeDE9IjEwIiB5MT0iMTIiIHgyPSIxOCIgeTI9IjEyIj48L2xpbmU+PGcgZmlsbD0iIzgwODA4MCI+PHBhdGggZD0iTTMgM2E1IDUgMCAwIDAtNSA1VjE5YTUgNSAwIDAgMCA1IDVoMTUiPjwvcGF0aD48L2c+PC9zdmc+";
+
+        card.innerHTML = `
+            <img src="${imgFullPath}" alt="${imgName}" onerror="this.src='${imgErrorSrc}'">
+            <div class="image-name">${imgName}</div>
+        `;
+        // 点击图片可预览（可选扩展）
+        card.addEventListener("click", () => {
+          window.open(imgFullPath, "_blank"); // 新开窗口查看原图
+        });
+        return card;
+      }
+
+      // ========== 核心方法3：绑定全局事件（右键/上传/菜单） ==========
+      function bindEvents() {
+        // 1. 点击空白处关闭右键菜单
+        document.addEventListener("click", () => {
+          contextMenu.style.display = "none";
+        });
+
+        // 2. 右键菜单-新建文件夹
+        document
+          .getElementById("createFolder")
+          .addEventListener("click", function () {
+            const folderName = prompt("请输入新建文件夹名称：");
+            if (!folderName || folderName.trim() === "") return;
+            createDirectory(folderName, currentPath);
+            contextMenu.style.display = "none";
+          });
+
+        // 3. 右键菜单-删除文件夹（顶级节点禁用）
+        document
+          .getElementById("deleteFolder")
+          .addEventListener("click", function () {
+            if (window.rightClickNode.path === spaceData.path) return;
+            if (
+              confirm(`确定删除文件夹【${window.rightClickNode.name}】吗？`)
+            ) {
+              deleteDirectory(window.rightClickNode.name, currentPath);
+              alert("删除成功！");
+              contextMenu.style.display = "none";
+            }
+          });
+
+        // 4. 上传图片按钮：触发文件选择框
+        uploadBtn.addEventListener("click", () => {
+          fileInput.click();
+        });
+
+        // 5. 选择图片后：校验格式+调用上传接口
+        fileInput.addEventListener("change", async function () {
+          const files = this.files;
+          if (files.length === 0) return;
+
+          // 校验文件格式（仅允许jpg/jpeg/png）
+          const validFiles = Array.from(files).filter((file) => {
+            const type = file.type;
+            return (
+              type === "image/jpg" ||
+              type === "image/jpeg" ||
+              type === "image/png"
+            );
+          });
+          if (validFiles.length === 0) {
+            alert("请选择jpg/jpeg/png格式的图片！");
+            return;
+          }
+
+          // 构造上传FormData（MultipartFile格式）
+          const formData = new FormData();
+          validFiles.forEach((file) => formData.append("file", file));
+          const rootName = spaceData.name;
+          const rootIndex = currentPath.indexOf(rootName);
+
+          const relativePath = currentPath.substring(rootIndex);
+
+          const destPath = "/" + relativePath.replace(/\\/g, "/") + "/";
+
+          formData.append("destPath", destPath);
+          console.log("最终传递的destPath：", destPath);
+
+          // 调用后端上传接口（POST）
+          try {
+            const res = await fetch("/uploadImage", {
+              method: "POST",
+              headers: {
+                token: localStorage.getItem("userToken"), // 携带token
+              },
+              body: formData, // 图片+路径参数
+            });
+            const result = await res.json();
+            if (result.code === 0) {
+              alert("图片上传成功！");
+              this.value = ""; // 重置文件选择框
+              // ✅ 上传成功后，自动刷新当前文件夹的图片列表
+              if (currentNode && !currentNode.children) loadImages(currentPath);
+            } else {
+              alert(`上传失败：${result.msg}`);
+            }
+          } catch (err) {
+            console.error("上传失败：", err);
+            alert("服务器连接失败，图片上传失败");
+          }
+        });
+      }
+
+      // ========== 新增核心方法：调用新建文件夹接口 ==========
+      async function createDirectory(folderName, currentPath) {
+        try {
+          // 显示加载遮罩
+          loadingMask.style.display = "flex";
+          // 构造接口参数
+          const postData = {
+            folderName: folderName,
+            currentPath: currentPath,
+          };
+          // 调用createDir接口
+          const res = await fetch(`/createDir`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              token: localStorage.getItem("userToken"),
+            },
+            body: JSON.stringify(postData),
+          });
+          const result = await res.json();
+          loadingMask.style.display = "none";
+
+          if (result.code === 0) {
+            // 刷新当前节点数据（重新请求最新的文件夹结构）
+            await refreshCurrentNodeData();
+          } else {
+            alert(`创建失败：${result.msg || "未知错误"}`);
+          }
+        } catch (err) {
+          loadingMask.style.display = "none";
+          console.error("创建文件夹失败：", err);
+        }
+      }
+
+      // ========== 新增核心方法：调用删除文件夹接口 ==========
+      async function deleteDirectory(folderName, currentPath) {
+        try {
+          // 显示加载遮罩
+          loadingMask.style.display = "flex";
+          // 构造接口参数
+          const postData = {
+            folderName: folderName,
+            currentPath: currentPath,
+          };
+          // 调用deleteDir接口
+          const res = await fetch(`/deleteDir`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              token: localStorage.getItem("userToken"),
+            },
+            body: JSON.stringify(postData),
+          });
+          const result = await res.json();
+          loadingMask.style.display = "none";
+
+          if (result.code === 0) {
+            alert(`文件夹【${folderName}】删除成功！`);
+            // 刷新当前节点数据
+            await refreshCurrentNodeData();
+          } else {
+            alert(`删除失败：${result.msg || "未知错误"}`);
+          }
+        } catch (err) {
+          loadingMask.style.display = "none";
+          console.error("删除文件夹失败：", err);
+          alert("服务器连接失败，无法删除文件夹");
+        }
+      }
+
+      // ========== 新增核心方法：刷新当前节点的最新数据 ==========
+      async function refreshCurrentNodeData() {
+        try {
+          // 重新请求顶级数据（保证数据最新）
+          const res = await fetch(`/scanner?path=${spaceData.name}`, {
+            method: "GET",
+            headers: {
+              token: localStorage.getItem("userToken"),
+              "Content-Type": "application/json",
+            },
+          });
+          const result = await res.json();
+          if (result.code === 0) {
+            spaceData = result.data;
+            // 清空树形结构，重新渲染
+            treeBox.innerHTML = "";
+            renderTree(spaceData, treeBox);
+            // 重新渲染当前视图
+            if (currentNode) {
+              // 找到最新的currentNode
+              const findNode = (data, path) => {
+                if (data.path === path) return data;
+                if (data.children && data.children.length > 0) {
+                  for (let child of data.children) {
+                    const res = findNode(child, path);
+                    if (res) return res;
+                  }
+                }
+                return null;
+              };
+              const newCurrentNode = findNode(spaceData, currentPath);
+              if (newCurrentNode) {
+                currentNode = newCurrentNode;
+                renderFolderView(currentNode);
+                // 重新选中树形节点
+                document.querySelectorAll(".tree-node").forEach((el) => {
+                  if (el.dataset.path === currentPath)
+                    el.classList.add("active");
+                });
+              } else {
+                // 如果当前节点被删除，返回父节点
+                renderFolderView(spaceData);
+                currentNode = spaceData;
+                currentPath = spaceData.path;
+              }
+            }
+          }
+        } catch (err) {
+          console.error("刷新数据失败：", err);
+        }
+      }
+    </script>
+  </body>
+</html>

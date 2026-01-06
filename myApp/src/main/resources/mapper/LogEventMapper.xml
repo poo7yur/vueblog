@@ -10,4 +10,13 @@
         (#{log.module} ,#{log.description} ,#{log.ip} ,#{log.loginUser} ,#{log.uri} ,#{log.method} ,#{log.params} ,#{log.result} ,#{log.accessTime})
     </insert>
 
+    <select id="getMsg" resultType="com.example.myApp.demos.entity.MsgEntity">
+        select * from t_msg tm where group_id in
+        <foreach collection="list" open="(" close=")" separator="," item="id">#{id}</foreach>
+    </select>
+
+    <select id="getMsgGroupIds" resultType="java.lang.String">
+        select distinct group_id from t_user_group where user_id = #{userId}
+    </select>
+
 </mapper>

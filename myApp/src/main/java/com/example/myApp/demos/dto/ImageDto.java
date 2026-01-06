@@ -7,5 +7,6 @@ public class ImageDto {
 
     private String path;
 
-    private String fileName;
+    private String userId;
+
 }

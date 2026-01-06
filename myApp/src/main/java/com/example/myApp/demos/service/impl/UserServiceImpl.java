@@ -13,10 +13,15 @@ import com.example.myApp.demos.vo.UserVo;
 import org.apache.commons.lang3.ObjectUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.BeanUtils;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 
 import javax.annotation.Resource;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.time.Duration;
 
 
@@ -29,10 +34,17 @@ public class UserServiceImpl implements UserService {
     @Resource
     private StringRedisTemplate stringRedisTemplate;
 
+    @Value("${file.dir}")
+    private String fileDir;
+
     @Override
-    public String addUsr(RegisterDto dto) {
-        if (StringUtils.isEmpty(dto.getPassword()) || StringUtils.isEmpty(dto.getName()))
+    public String addUsr(RegisterDto dto) throws IOException {
+        String name = dto.getName();
+        if (StringUtils.isEmpty(dto.getPassword()) || StringUtils.isEmpty(name))
             throw new RuntimeException(Constants.PWD_NAME_NOT_NULL);
+        //判断下名称是否被用掉
+        User u = userMapper.findUser(name);
+        if (!ObjectUtils.isEmpty(u)) throw new RuntimeException(Constants.USED_NAME);
         //对用户密码进行加密 md5+salt
         String salt = RandomUtil.randomNumbers(8);
         String uid = RandomUtil.randomString(18);
@@ -43,6 +55,10 @@ public class UserServiceImpl implements UserService {
         user.setPassword(newPwd);
         user.setUserId(uid);
         userMapper.addUser(user);
+        //创建一个文件夹分配给当前用户
+        String newFolderPath = fileDir + name;
+        Path dir = Paths.get(newFolderPath);
+        Files.createDirectories(dir);
         return uid;
     }
 
@@ -63,4 +79,5 @@ public class UserServiceImpl implements UserService {
         BeanUtils.copyProperties(user, userVo);
         return userVo;
     }
+
 }
