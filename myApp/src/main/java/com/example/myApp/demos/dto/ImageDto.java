@@ -9,4 +9,8 @@ public class ImageDto {
 
     private String userId;
 
+    private int pageSize=10;
+
+    private int pageNo=1;
+
 }

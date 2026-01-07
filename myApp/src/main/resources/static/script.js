@@ -4,6 +4,7 @@ let rootData = null;
 // 页面加载完成后执行
 document.addEventListener("DOMContentLoaded", function () {
   fetchData();
+  initUserMenu();
 });
 
 /*拦截每个请求 请求头放上token*/
@@ -117,8 +118,6 @@ function renderTree(node, container) {
 function loadFolder(folderPath) {
   const contentArea = document.getElementById("contentArea");
   contentArea.innerHTML = "<p>加载中...</p>";
-
-  // 准备 POST 请求的数据
   const postData = {
     path: folderPath,
   };
@@ -132,8 +131,9 @@ function loadFolder(folderPath) {
   })
     .then((response) => response.json())
     .then((imgData) => {
-      if (imgData.code === 0 && Array.isArray(imgData.data)) {
-        renderImageGrid(imgData.data);
+      const urls =imgData.data.images;
+      if (imgData.code === 0 && Array.isArray(urls)) {
+        renderImageGrid(urls);
       } else {
         contentArea.innerHTML = "<p>该文件夹为空或发生错误。</p>";
       }
@@ -386,6 +386,15 @@ msgModal.addEventListener("click", (e) => {
   }
 });
 
+closeRegModal.addEventListener("click", () => {
+  registerModalMask.style.display = "none";
+});
+registerModalMask.addEventListener("click", (e) => {
+  if (e.target === registerModalMask) {
+    registerModalMask.style.display = "none";
+  }
+});
+
 //调接口拉取数据
 function fetchMessages() {
   fetch("/getMsg", {
@@ -462,44 +471,50 @@ function showErrorMessage(msg) {
   }, 2000);
 }
 
+const logoutBtn = document.getElementById("logout");
+function initUserMenu() {
+  // 获取登录状态
+  const isLogin = !!localStorage.getItem("currentUser") && !!localStorage.getItem("userToken");
+
+  // 1. 控制退出选项的显示/隐藏
+  if (isLogin) {
+    logoutBtn.style.display = "block"; // 登录状态显示退出
+  } else {
+    logoutBtn.style.display = "none"; // 非登录状态隐藏退出
+  }
+}
+
+// 绑定退出按钮点击事件
+logoutBtn.addEventListener("click", function(e) {
+  e.preventDefault(); // 阻止a标签默认跳转
+
+  // 确认退出
+  if (confirm("确定要退出登录吗？")) {
+     // 清空localStorage中的登录数据
+     localStorage.removeItem("userToken");
+     localStorage.removeItem("currentUser");
+     localStorage.removeItem("currentUserId");
+     // 刷新菜单状态
+     initUserMenu();
+     fetchData();
+     window.location.reload();
+  }
+});
+
 /*我的空间*/
 const spaceLink = document.getElementById("spaceLink");
 // 绑定点击事件
 spaceLink.addEventListener("click", async function (e) {
   e.preventDefault(); // 阻止a标签默认跳转
 
-  // 校验登录状态：判断localStorage是否存在用户和token
-  const currentUser = localStorage.getItem("currentUser");
-  const userToken = localStorage.getItem("userToken");
-  if (!currentUser || !userToken) {
-    alert("请登录后查看我的空间");
-    return; // 未登录终止执行
-  }
+ // 校验登录状态：判断localStorage是否存在用户和token
+   const currentUser = localStorage.getItem("currentUser");
+   const userToken = localStorage.getItem("userToken");
+   if (!currentUser || !userToken) {
+     alert("请登录后查看我的空间");
+     return; // 未登录终止执行
+   }
 
-  // 已登录：请求后端文件夹数据接口
-  try {
-    const res = await fetch(
-      `/scanner?path=${currentUser}`,
-      {
-        method: "GET",
-        headers: {
-          token: userToken, // 携带token请求头
-          "Content-Type": "application/json",
-        },
-      }
-    );
-    const result = await res.json();
-
-    // 接口请求成功（code=0），跳转myspace.html并携带数据
-    if (result.code === 0) {
-      // 将数据转成字符串，通过URL参数传递（也可复用localStorage存储）
-      const spaceData = encodeURIComponent(JSON.stringify(result.data));
-      window.open(`myspace.html?data=${spaceData}`, "_blank"); // 新开标签页跳转
-    } else {
-      alert(`数据加载失败：${result.msg}`);
-    }
-  } catch (err) {
-    console.error("接口请求失败：", err);
-    alert("服务器连接失败，请稍后重试");
-  }
+   // 已登录直接跳转到myspace.html，不再携带接口数据
+   window.open("myspace.html", "_blank"); // 新开标签页跳转
 });

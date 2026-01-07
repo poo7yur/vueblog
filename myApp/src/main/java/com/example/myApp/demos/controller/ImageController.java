@@ -5,6 +5,7 @@ import com.example.myApp.demos.dto.ImageDto;
 import com.example.myApp.demos.entity.R;
 import com.example.myApp.demos.service.ImageService;
 import com.example.myApp.demos.util.DirScannerUtil;
+import com.example.myApp.demos.vo.PageImageVo;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
@@ -13,7 +14,6 @@ import javax.annotation.Resource;
 import javax.servlet.http.HttpServletRequest;
 import javax.validation.constraints.NotNull;
 import java.io.IOException;
-import java.util.List;
 
 @RestController
 public class ImageController {
@@ -31,7 +31,7 @@ public class ImageController {
     }
 
     @PostMapping("/listImages")
-    public R<List<String>> listImages(@RequestBody ImageDto dto) {
+    public R<PageImageVo> listImages(@RequestBody ImageDto dto) {
         try {
             if (StringUtils.isEmpty(dto.getPath())) throw new IllegalArgumentException("path can't be empty");
             return R.ok(imageService.listImages(dto));

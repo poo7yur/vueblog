@@ -1,7 +1,6 @@
 package com.example.myApp.demos.service.impl;
 
 import cn.hutool.core.util.RandomUtil;
-import com.example.myApp.demos.Constants;
 import com.example.myApp.demos.dto.DirDto;
 import com.example.myApp.demos.dto.ImageDto;
 import com.example.myApp.demos.entity.User;
@@ -9,8 +8,10 @@ import com.example.myApp.demos.mapper.UserMapper;
 import com.example.myApp.demos.service.ImageService;
 import com.example.myApp.demos.util.DirScannerUtil;
 import com.example.myApp.demos.util.JwtUtil;
+import com.example.myApp.demos.vo.PageImageVo;
 import io.jsonwebtoken.Claims;
 import org.apache.commons.lang3.StringUtils;
+import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
@@ -22,6 +23,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Set;
@@ -57,18 +59,24 @@ public class ImageServiceImpl implements ImageService {
     }
 
     @Override
-    public List<String> listImages(ImageDto dto) {
-        return DirScannerUtil.listImages(dto);
+    public PageImageVo listImages(ImageDto dto) {
+        List<String> imgUrls = new ArrayList<>();
+        int total = DirScannerUtil.listImages(dto, imgUrls);
+        PageImageVo pageImageVo = new PageImageVo();
+        BeanUtils.copyProperties(dto, pageImageVo);
+        pageImageVo.setTotal(total);
+        pageImageVo.setImages(imgUrls);
+        return pageImageVo;
     }
 
     /**
      * 上传图片到服务器指定路径下
-     *  destPath= '/adm/02/021/'
+     * destPath= '/adm/02/021/'
      */
     @Override
     public void uploadImage(MultipartFile file, String destPath) throws IOException {
         String userName = destPath.split("/")[1];
-        if(StringUtils.isEmpty(userName)) throw new IllegalArgumentException("文件格式非法");
+        if (StringUtils.isEmpty(userName)) throw new IllegalArgumentException("文件格式非法");
         Path userSpace = Paths.get(fileDir, userName);
         long div = 1024 * 1024;
         /*计算已用空间 & 校验额度（user表里配了额度，单位 MB） */
@@ -112,7 +120,11 @@ public class ImageServiceImpl implements ImageService {
 
     @Override
     public void deleteDir(DirDto dto) throws IOException {
-        Path target = Paths.get(dto.getCurrentPath(), dto.getFolderName());
+        Path target = Paths.get(dto.getCurrentPath());
+        String user = dto.getCurrentUser();
+        String userSpace = fileDir + user;
+        if (!userSpace.startsWith(fileDir) && dto.getCurrentPath().length() > userSpace.length())
+            throw new RuntimeException("非法操作");
         if (!Files.exists(target) || !Files.isDirectory(target))
             throw new FileNotFoundException("目录不存在：" + target);
         Files.walk(target)

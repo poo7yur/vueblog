@@ -14,7 +14,7 @@ import java.util.Set;
 
 public class DirScannerUtil {
 
-    public static Node buildTree(Path dir,String loginUser,Set<String> allUserNames) {
+    public static Node buildTree(Path dir, String loginUser, Set<String> allUserNames) {
         String dirName = dir.getFileName().toString();
 
         // 如果是“用户目录”且不是当前登录用户的目录，则直接跳过（不返回该分支）
@@ -65,26 +65,58 @@ public class DirScannerUtil {
         return node;
     }
 
-    public static List<String> listImages(ImageDto dto) {
+    /**
+     * 分页返回指定目录下所有图片的绝对路径
+     *
+     * @param dto     包含 path / pageNo / pageSize
+     * @param imgUrls 出参：当前页的路径列表
+     * @return 总图片数（用于前端计算总页数）
+     */
+    public static int listImages(ImageDto dto, List<String> imgUrls) {
         String dirPath = dto.getPath();
         File root = new File(dirPath.trim());
         if (!root.exists() || !root.isDirectory()) {
             throw new IllegalArgumentException("目录不存在：" + dirPath);
         }
-        List<String> result = new ArrayList<>();
-        walkDir(root, result);
-        return result;
+
+        int pageNo = dto.getPageNo();
+        int pageSize = dto.getPageSize();
+        if (pageNo < 1 || pageSize < 1) {
+            throw new IllegalArgumentException("分页参数非法");
+        }
+
+        int[] total = {0};  // 用数组包装，解决Java基本类型无法在方法内修改的问题
+        int start = (pageNo - 1) * pageSize + 1; // 闭区间 [start, end]
+        int end = pageNo * pageSize;
+
+        walkDir(root, total, start, end, imgUrls);
+        return total[0];
     }
 
-    private static void walkDir(File dir, List<String> list) {
-        File[] files = dir.listFiles();
+    /**
+     *
+     * @param total   计数器（数组长度=1，可修改）
+     * @param start   当前页起始序号（闭）
+     * @param end     当前页结束序号（闭）
+     * @param imgUrls 当前页路径列表
+     */
+    private static void walkDir(File root, int[] total, int start, int end, List<String> imgUrls) {
+        //获取目录下所有文件/文件夹（仅当前层级）
+        File[] files = root.listFiles();
         if (files == null) return;
-        for (File f : files) {
-            if (f.isFile()) {
-                list.add(f.getAbsolutePath());
-            } else if (f.isDirectory()) {
-                walkDir(f, list);
+
+        // 遍历所有文件/文件夹，仅统计文件
+        for (File file : files) {
+            // 只处理文件，跳过文件夹
+            if (file.isFile()) {
+                total[0]++; // 总数+1
+                //判断当前文件是否在分页区间内，若是则收集全路径
+                int currentIndex = total[0];
+                if (currentIndex >= start && currentIndex <= end) {
+                    imgUrls.add(file.getAbsolutePath());
+                }
             }
+            // 不递归处理子文件夹，直接跳过
         }
     }
 

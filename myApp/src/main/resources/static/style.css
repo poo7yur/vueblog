@@ -326,6 +326,18 @@ header {
     background-color: #0056b3;
 }
 
+.user-menu li {
+  list-style: none;
+  margin: 8px 0;
+}
+.user-menu li a {
+  text-decoration: none;
+  color: #333;
+}
+#logout {
+  display: none; /* 默认隐藏，登录后由JS控制显示 */
+}
+
 /*美化消息表格*/
 .msg-modal {
     display: none;
