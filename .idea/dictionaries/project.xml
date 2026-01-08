@@ -3,6 +3,7 @@
     <words>
       <w>addr</w>
       <w>dest</w>
+      <w>illeg</w>
       <w>timestp</w>
     </words>
   </dictionary>

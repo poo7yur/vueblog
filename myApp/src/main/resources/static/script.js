@@ -131,7 +131,7 @@ function loadFolder(folderPath) {
   })
     .then((response) => response.json())
     .then((imgData) => {
-      const urls =imgData.data.images;
+      const urls = imgData.data.images;
       if (imgData.code === 0 && Array.isArray(urls)) {
         renderImageGrid(urls);
       } else {
@@ -183,9 +183,34 @@ function renderImageGrid(filePathList) {
   contentArea.innerHTML = html;
 }
 
-// 5. 可选：点击图片放大
 function openImage(src) {
-  window.open(src, "_blank");
+  // 创建遮罩层
+  const modal = document.createElement("div");
+  modal.style.position = "fixed";
+  modal.style.top = "0";
+  modal.style.left = "0";
+  modal.style.width = "100%";
+  modal.style.height = "100%";
+  modal.style.backgroundColor = "rgba(0, 0, 0, 0.9)"; // 深色背景
+  modal.style.zIndex = "1000";
+  modal.style.display = "flex";
+  modal.style.justifyContent = "center";
+  modal.style.alignItems = "center";
+  modal.style.cursor = "pointer";
+
+  // 创建大图
+  const img = document.createElement("img");
+  img.src = src;
+  img.style.maxWidth = "90vw"; // 最大宽度为视口的 90%
+  img.style.maxHeight = "90vh"; // 最大高度为视口的 90%
+  img.style.border = "3px solid #fff";
+  img.style.boxShadow = "0 4px 20px rgba(255,255,255,0.1)";
+
+  // 点击遮罩层关闭
+  modal.onclick = () => document.body.removeChild(modal);
+
+  modal.appendChild(img);
+  document.body.appendChild(modal);
 }
 
 // 获取DOM元素
@@ -265,6 +290,10 @@ loginBtn.addEventListener("click", async () => {
     }
 
     const result = await response.json(); // 解析后端返回的JSON数据
+    if(result.code!==0) {
+        alert(result.msg);
+        return;
+    }
     const token = result.data.token; // 提取Token（假设后端返回格式：{ "token": "xxx.yyy.zzz" }）
     const userId = result.data.userId;
 
@@ -278,6 +307,8 @@ loginBtn.addEventListener("click", async () => {
 
     //alert("登录成功！Token已存储");
     loginModalMask.style.display = "none"; // 关闭弹窗
+    treeContainer.innerHTML = "";
+    fetchData();
     // 关键：登录成功后调用视图更新函数
     updateUserView(username, userId);
   } catch (error) {
@@ -345,10 +376,8 @@ document.getElementById("registerBtn").addEventListener("click", function () {
   })
     .then((response) => response.json())
     .then((data) => {
-      alert("注册成功！");
+      alert("注册成功！,请登陆后使用");
       document.getElementById("registerModalMask").style.display = "none";
-      // 注册成功后调用视图更新函数
-      updateUserView(username);
     })
     .catch((error) => {
       console.error("Error:", error);
@@ -474,7 +503,9 @@ function showErrorMessage(msg) {
 const logoutBtn = document.getElementById("logout");
 function initUserMenu() {
   // 获取登录状态
-  const isLogin = !!localStorage.getItem("currentUser") && !!localStorage.getItem("userToken");
+  const isLogin =
+    !!localStorage.getItem("currentUser") &&
+    !!localStorage.getItem("userToken");
 
   // 1. 控制退出选项的显示/隐藏
   if (isLogin) {
@@ -485,19 +516,18 @@ function initUserMenu() {
 }
 
 // 绑定退出按钮点击事件
-logoutBtn.addEventListener("click", function(e) {
+logoutBtn.addEventListener("click", function (e) {
   e.preventDefault(); // 阻止a标签默认跳转
-
   // 确认退出
   if (confirm("确定要退出登录吗？")) {
-     // 清空localStorage中的登录数据
-     localStorage.removeItem("userToken");
-     localStorage.removeItem("currentUser");
-     localStorage.removeItem("currentUserId");
-     // 刷新菜单状态
-     initUserMenu();
-     fetchData();
-     window.location.reload();
+    // 清空localStorage中的登录数据
+    localStorage.removeItem("userToken");
+    localStorage.removeItem("currentUser");
+    localStorage.removeItem("currentUserId");
+    // 刷新菜单状态
+    initUserMenu();
+    fetchData();
+    window.location.reload();
   }
 });
 
@@ -507,14 +537,14 @@ const spaceLink = document.getElementById("spaceLink");
 spaceLink.addEventListener("click", async function (e) {
   e.preventDefault(); // 阻止a标签默认跳转
 
- // 校验登录状态：判断localStorage是否存在用户和token
-   const currentUser = localStorage.getItem("currentUser");
-   const userToken = localStorage.getItem("userToken");
-   if (!currentUser || !userToken) {
-     alert("请登录后查看我的空间");
-     return; // 未登录终止执行
-   }
+  // 校验登录状态：判断localStorage是否存在用户和token
+  const currentUser = localStorage.getItem("currentUser");
+  const userToken = localStorage.getItem("userToken");
+  if (!currentUser || !userToken) {
+    alert("请登录后查看我的空间");
+    return; // 未登录终止执行
+  }
 
-   // 已登录直接跳转到myspace.html，不再携带接口数据
-   window.open("myspace.html", "_blank"); // 新开标签页跳转
+  // 已登录直接跳转到myspace.html，不再携带接口数据
+  window.open("myspace.html", "_blank"); // 新开标签页跳转
 });

@@ -35,6 +35,7 @@
 
       .image-item {
         text-align: center;
+        position: relative; /* 新增：为删除按钮定位做准备 */
       }
 
       .image-grid img {
@@ -44,6 +45,35 @@
         border-radius: 8px;
         cursor: pointer;
         transition: transform 0.2s;
+      }
+
+      /* 新增：图片删除按钮样式 */
+      .image-delete-btn {
+        position: absolute;
+        top: 5px;
+        right: 5px;
+        width: 24px;
+        height: 24px;
+        background-color: rgba(255, 0, 0, 0.8);
+        color: white;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        font-size: 12px;
+        font-weight: bold;
+        opacity: 0; /* 默认隐藏 */
+        transition: opacity 0.2s;
+        z-index: 10;
+      }
+
+      .image-item:hover .image-delete-btn {
+        opacity: 1; /* 悬浮显示 */
+      }
+
+      .image-delete-btn:hover {
+        background-color: rgba(255, 0, 0, 1); /* 悬浮加深红色 */
       }
 
       /* 悬停微交互（可选）：鼠标放上去图片稍微放大，增加视觉反馈 */
@@ -317,6 +347,7 @@
       let spaceData = null; // 接口返回的完整文件夹数据
       let currentNode = null; // 当前选中的节点数据
       let currentPath = ""; // 当前文件夹的完整路径（用于上传/新建/加载图片）
+      let currentFolderPath = ""; // 新增：当前加载图片的文件夹路径
       const contextMenu = document.getElementById("contextMenu");
       const treeBox = document.getElementById("treeBox");
       const folderView = document.getElementById("folderView");
@@ -446,9 +477,9 @@
             card.dataset.path = child.path;
             card.dataset.name = child.name;
             card.innerHTML = `
-                    <i class="fas fa-folder"></i>
-                    <div class="folder-name">${child.name}</div>
-                `;
+                  <i class="fas fa-folder"></i>
+                  <div class="folder-name">${child.name}</div>
+              `;
             // 点击文件夹卡片：刷新视图为子文件夹内容/加载图片
             card.addEventListener("click", function () {
               currentNode = child;
@@ -466,42 +497,6 @@
           // ✅ 无子女文件夹 → 调用方法加载当前文件夹下的图片
           loadFolderImg(node.path);
         }
-      }
-
-      function loadFolderImg(folderPath) {
-        const contentArea = document.getElementById("contentArea");
-        folderView.innerHTML = "<p>加载中...</p>";
-        // 记录当前文件夹路径
-        currentFolderPath = folderPath;
-        const postData = {
-          path: folderPath,
-          pageNo: currentPage,
-          pageSize: PAGE_SIZE,
-        };
-
-        fetch("/listImages", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify(postData),
-        })
-          .then((response) => response.json())
-          .then((imgData) => {
-            if (imgData.code === 0 && Array.isArray(imgData.data.images)) {
-              // 计算总页数
-              totalPages = Math.ceil(imgData.data.total / PAGE_SIZE);
-
-              // 更新分页信息和按钮状态
-              updatePaginationUI();
-              renderImageGrid(imgData.data.images);
-            } else {
-              console.error("该文件夹为空或发生错误");
-            }
-          })
-          .catch((err) => {
-            folderView.innerHTML = `<p style="color:red">图片加载失败: ${err}</p>`;
-          });
       }
 
       // 更新分页UI的函数
@@ -524,19 +519,28 @@
         const contentArea = document.getElementById("contentArea");
         const baseUrl = "/static/";
         const webPathList = filePathList.map((fullPath) => {
-          // 将 Windows 路径分隔符 \ 替换为 / (防止路径显示错误)
+          // 1. 强制将所有反斜杠替换为正斜杠，统一路径格式
           let webPath = fullPath.replace(/\\/g, "/");
 
-          // 关键步骤：截取 "save" 目录之后的部分，并拼接到 baseUrl 后面
-          // 假设后端映射的是 save 目录，所以我们需要去掉 "C:/Users/Admin/Pictures/save"
-          const saveIndex = webPath.indexOf("/save/");
+          // 2. 关键优化：处理 "save/" 截取逻辑，兼容多种路径格式
+          const saveKeyword = "/save/";
+          const saveIndex = webPath.indexOf(saveKeyword);
 
           if (saveIndex !== -1) {
-            // 从 '/save/' 之后开始截取，并拼接到 /static/ 后面
-            return baseUrl + webPath.substring(saveIndex + 6); // +6 是为了去掉 '/save/' 这6个字符
+            // 截取 save/ 之后的部分（确保分隔符保留）
+            const pathAfterSave = webPath.substring(
+              saveIndex + saveKeyword.length
+            );
+            // 拼接 baseUrl，确保路径分隔符正确（避免连续斜杠，也避免无斜杠）
+            const finalPath = `${baseUrl}${pathAfterSave}`.replace(
+              /\/\/+/g,
+              "/"
+            );
+            // 3. 对 URL 进行编码，处理空格、中文等特殊字符
+            return encodeURI(finalPath);
           } else {
-            // 如果找不到 save，直接返回原路径（或者做其他容错处理）
-            return webPath;
+            // 容错：找不到 save/ 时，仍返回编码后的原路径
+            return encodeURI(webPath);
           }
         });
 
@@ -544,16 +548,51 @@
         let html = `<div class="image-grid">`;
 
         webPathList.forEach((src) => {
-          html += `
-        <div class="image-item" onclick="openImage('${src}')">
-          <img src="${src}" loading="lazy">
-        </div>
-      `;
+        html += `
+          <div class="image-item" onclick="openImage('${src}')">
+            <!-- 删除按钮：默认隐藏，悬浮显示 -->
+            <div class="image-delete-btn" onclick="event.stopPropagation(); deleteImage('${src}')">×</div>
+            <img src="${src}" loading="lazy">
+          </div>
+        `;
         });
 
         html += `</div>`;
-
         folderView.innerHTML = html;
+      }
+
+      // ========== 新增：删除图片方法 ==========
+      async function deleteImage(imagePath) {
+        // 确认删除
+        console.log(imagePath);
+        if (!confirm(`确定要删除图片吗？`)) {
+          return;
+        }
+
+        try {
+          const userToken = localStorage.getItem("userToken");
+
+          const res = await fetch("/removeImage", {
+            method: "POST",
+            headers: {
+              token: userToken,
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({ path: imagePath }),
+          });
+
+          const result = await res.json();
+          if (result.code === 0 || res.ok) {
+            showTip("success", "图片删除成功！");
+            // 重新加载当前页图片
+            loadFolderImg(currentFolderPath);
+          } else {
+            showTip("error", `删除失败：${result.msg || "未知错误"}`);
+          }
+        } catch (err) {
+          console.error("删除图片失败：", err);
+          showTip("error", "服务器连接失败，图片删除失败");
+        }
       }
 
       function openImage(src) {
@@ -571,9 +610,9 @@
         modal.style.alignItems = "center";
         modal.style.cursor = "pointer";
 
-        // 创建大图
+        // 创建大图（使用 decodeURI 还原编码后的路径，避免图片加载异常）
         const img = document.createElement("img");
-        img.src = src;
+        img.src = decodeURI(src); // 关键：解码 URL
         img.style.maxWidth = "90vw"; // 最大宽度为视口的 90%
         img.style.maxHeight = "90vh"; // 最大高度为视口的 90%
         img.style.border = "3px solid #fff";
@@ -585,7 +624,6 @@
         modal.appendChild(img);
         document.body.appendChild(modal);
       }
-
       // ========== 辅助方法：创建图片卡片（格式化路径+美化展示） ==========
       function createImageCard(imgFullPath) {
         const card = document.createElement("div");
@@ -598,9 +636,9 @@
           "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI0MCIgaGVpZ2h0PSI0MCIgdmlld0JveD0iMCAwIDI0IDI0IiBmaWxsPSJub25lIiBzdHJva2U9IiM5OTk5OTkiIHN0cm9rZS13aWR0aD0iMiIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIj48cGF0aCBkPSJNMjEgMTV2N2EyIDIgMCAwIDEtMiAyaC0xNmEyIDIgMCAwIDEtMi0yVjVhMiAyIDAgMCAxIDItMmg3Ij48L3BhdGg+PGxpbmUgeDE9IjE0IiB5MT0iMTIiIHgyPSIxNCIgeTI9IjE2Ij48L2xpbmU+PGxpbmUgeDE9IjEwIiB5MT0iMTIiIHgyPSIxOCIgeTI9IjEyIj48L2xpbmU+PGcgZmlsbD0iIzgwODA4MCI+PHBhdGggZD0iTTMgM2E1IDUgMCAwIDAtNSA1VjE5YTUgNSAwIDAgMCA1IDVoMTUiPjwvcGF0aD48L2c+PC9zdmc+";
 
         card.innerHTML = `
-            <img src="${imgFullPath}" alt="${imgName}" onerror="this.src='${imgErrorSrc}'">
-            <div class="image-name">${imgName}</div>
-        `;
+          <img src="${imgFullPath}" alt="${imgName}" onerror="this.src='${imgErrorSrc}'">
+          <div class="image-name">${imgName}</div>
+      `;
         // 点击图片可预览（可选扩展）
         card.addEventListener("click", () => {
           window.open(imgFullPath, "_blank"); // 新开窗口查看原图
@@ -691,7 +729,7 @@
               showTip("success", "图片上传成功！");
               this.value = ""; // 重置文件选择框
               // ✅ 上传成功后，自动刷新当前文件夹的图片列表
-              if (currentNode && !currentNode.children) loadImages(currentPath);
+              loadFolderImg(currentPath);
             } else {
               showTip("error", `上传失败：${result.msg}`);
             }
@@ -809,6 +847,45 @@
         } catch (err) {
           console.error("刷新数据失败：", err);
         }
+      }
+
+      function loadFolderImg(folderPath) {
+        const contentArea = document.getElementById("contentArea");
+        folderView.innerHTML = "<p>加载中...</p>";
+        // 记录当前文件夹路径
+        currentFolderPath = folderPath;
+        const postData = {
+          path: folderPath,
+          pageNo: currentPage,
+          pageSize: PAGE_SIZE,
+        };
+
+        fetch("/listImages", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(postData),
+        })
+          .then((response) => response.json())
+          .then((imgData) => {
+            if (imgData.code === 0 && Array.isArray(imgData.data.images)) {
+              // 计算总页数
+              totalPages = Math.ceil(imgData.data.total / PAGE_SIZE);
+
+              // 更新分页信息和按钮状态
+              updatePaginationUI();
+              renderImageGrid(imgData.data.images);
+            } else {
+              folderView.innerHTML =
+                "<p class='empty-tip'>该文件夹暂无图片</p>";
+              totalPages = 0;
+              updatePaginationUI();
+            }
+          })
+          .catch((err) => {
+            folderView.innerHTML = `<p style="color:red">图片加载失败: ${err}</p>`;
+          });
       }
 
       //显示提示文字

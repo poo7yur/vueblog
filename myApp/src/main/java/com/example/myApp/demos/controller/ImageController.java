@@ -1,7 +1,10 @@
 package com.example.myApp.demos.controller;
 
+import com.example.myApp.demos.Constants;
+import com.example.myApp.demos.aop.AccessLog;
 import com.example.myApp.demos.dto.DirDto;
 import com.example.myApp.demos.dto.ImageDto;
+import com.example.myApp.demos.dto.OptDto;
 import com.example.myApp.demos.entity.R;
 import com.example.myApp.demos.service.ImageService;
 import com.example.myApp.demos.util.DirScannerUtil;
@@ -33,7 +36,7 @@ public class ImageController {
     @PostMapping("/listImages")
     public R<PageImageVo> listImages(@RequestBody ImageDto dto) {
         try {
-            if (StringUtils.isEmpty(dto.getPath())) throw new IllegalArgumentException("path can't be empty");
+            if (StringUtils.isEmpty(dto.getPath())) throw new IllegalArgumentException(Constants.PATH_NOT_EMPTY);
             return R.ok(imageService.listImages(dto));
         } catch (Exception e) {
             return R.fail(e.getMessage());
@@ -50,6 +53,17 @@ public class ImageController {
         }
     }
 
+    @PostMapping("/removeImage")
+    @AccessLog(module = "img manage" ,description = "delete image")
+    public R<String> removeImage(@RequestBody OptDto dto, HttpServletRequest request) {
+        try {
+            if(StringUtils.isEmpty(dto.getPath())) throw new IllegalArgumentException(Constants.PATH_NOT_EMPTY);
+            return R.ok(imageService.removeImage(dto ,request));
+        }catch (Exception e){
+            return R.fail(e.getMessage());
+        }
+    }
+
     @PostMapping("/createDir")
     public R<String> createDir(@RequestBody DirDto dto) {
         try {
@@ -61,6 +75,7 @@ public class ImageController {
     }
 
     @PostMapping("/deleteDir")
+    @AccessLog(module = "img manage" ,description = "remove dir")
     public R<String> deleteDir(@RequestBody DirDto dto) {
         try {
             imageService.deleteDir(dto);

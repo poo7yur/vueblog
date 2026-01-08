@@ -1,8 +1,10 @@
 package com.example.myApp.demos.service.impl;
 
 import cn.hutool.core.util.RandomUtil;
+import com.example.myApp.demos.Constants;
 import com.example.myApp.demos.dto.DirDto;
 import com.example.myApp.demos.dto.ImageDto;
+import com.example.myApp.demos.dto.OptDto;
 import com.example.myApp.demos.entity.User;
 import com.example.myApp.demos.mapper.UserMapper;
 import com.example.myApp.demos.service.ImageService;
@@ -20,6 +22,7 @@ import javax.annotation.Resource;
 import javax.servlet.http.HttpServletRequest;
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.nio.file.DirectoryStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -27,6 +30,7 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Set;
+import java.util.stream.Stream;
 
 @Service
 public class ImageServiceImpl implements ImageService {
@@ -78,6 +82,8 @@ public class ImageServiceImpl implements ImageService {
         String userName = destPath.split("/")[1];
         if (StringUtils.isEmpty(userName)) throw new IllegalArgumentException("文件格式非法");
         Path userSpace = Paths.get(fileDir, userName);
+        //判断目标路径下是否有子目录 有的话不让放图片
+        if (checkDirHasChildDir(destPath)) throw new RuntimeException("目标目录下不允许放图片");
         long div = 1024 * 1024;
         /*计算已用空间 & 校验额度（user表里配了额度，单位 MB） */
         long usedMb = Files.exists(userSpace)
@@ -112,9 +118,32 @@ public class ImageServiceImpl implements ImageService {
 
     @Override
     public void createDir(DirDto dto) throws IOException {
-        String currentPath = dto.getCurrentPath();
+        String currentPathStr = dto.getCurrentPath();
         String folderName = dto.getFolderName();
-        Path newPath = Paths.get(currentPath, folderName);
+
+        Path currentDir = Paths.get(currentPathStr);
+        Path newPath = currentDir.resolve(folderName); // 更安全的路径拼接
+
+        // 检查当前目录是否存在且是目录
+        if (!Files.exists(currentDir)) {
+            throw new RuntimeException("当前路径不存在: " + currentPathStr);
+        }
+        if (!Files.isDirectory(currentDir)) {
+            throw new RuntimeException("当前路径不是目录: " + currentPathStr);
+        }
+
+        // 检查当前目录下是否有文件（不包括子目录）
+        try (Stream<Path> stream = Files.list(currentDir)) {
+            // 只判断普通文件
+            boolean hasFiles = stream.anyMatch(Files::isRegularFile);
+
+            if (hasFiles) {
+                throw new IllegalArgumentException("当前目录包含文件，不允许创建新子文件夹");
+            }
+        }
+        // 检查要创建的目录是否已存在
+        if (Files.exists(newPath)) throw new RuntimeException("目录已存在: " + newPath);
+        // 创建新目录
         Files.createDirectories(newPath);
     }
 
@@ -124,7 +153,7 @@ public class ImageServiceImpl implements ImageService {
         String user = dto.getCurrentUser();
         String userSpace = fileDir + user;
         if (!userSpace.startsWith(fileDir) && dto.getCurrentPath().length() > userSpace.length())
-            throw new RuntimeException("非法操作");
+            throw new RuntimeException(Constants.ILLEGAl_OPT);
         if (!Files.exists(target) || !Files.isDirectory(target))
             throw new FileNotFoundException("目录不存在：" + target);
         Files.walk(target)
@@ -138,6 +167,50 @@ public class ImageServiceImpl implements ImageService {
                 });
     }
 
+    @Override
+    public String removeImage(OptDto dto, HttpServletRequest request) throws IOException {
+        // 1. 拿到真实文件路径
+        Path targetPath = parseRealPath(dto.getPath());
+
+        // 2. 安全校验：必须位于当前登录用户的空间内
+        String username = parseUserFromToken(request);
+        Path userSpace = Paths.get(fileDir, username).toAbsolutePath();
+        if (!targetPath.toAbsolutePath().startsWith(userSpace)) {
+            throw new RuntimeException(Constants.ILLEGAl_OPT);
+        }
+
+        // 3. 删除
+        Files.deleteIfExists(targetPath);
+        return "删除成功";
+    }
+
+    private boolean checkDirHasChildDir(String dirPath) {
+        Path dir = Paths.get(fileDir + dirPath);
+
+        // 检查路径是否存在且是目录
+        if (!Files.exists(dir) || !Files.isDirectory(dir)) return false;
+
+        try (DirectoryStream<Path> stream = Files.newDirectoryStream(dir)) {
+            for (Path path : stream) {
+                if (Files.isDirectory(path)) {
+                    return true; // 找到第一个子目录就返回 true
+                }
+            }
+        } catch (IOException e) {
+            return false;
+        }
+        return false; // 没有子目录
+    }
+
+    private Path parseRealPath(String staticPath) {
+        if (!staticPath.startsWith("/static/")) {
+            throw new RuntimeException(Constants.ILLEGAl_OPT);
+        }
+        // 去掉 /static 前缀得到用户路径
+        String relative = staticPath.substring("/static".length());
+        return Paths.get(fileDir, relative).normalize(); //返回文件全路径
+    }
+
     private String parseUserFromToken(HttpServletRequest request) {
         String token = request.getHeader("token");
         if (StringUtils.isBlank(token)) {
@@ -145,7 +218,7 @@ public class ImageServiceImpl implements ImageService {
         }
         try {
             Claims claims = JwtUtil.parseToken(token);
-            return claims.getSubject();
+            return claims.getSubject();//返回用户名
         } catch (Exception e) {
             return null;
         }

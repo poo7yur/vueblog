@@ -11,4 +11,7 @@ public class Constants {
 
     public static final String USED_NAME = "名称已被使用";
 
+    public static final String ILLEGAl_OPT = "非法操作";
+
+    public static final String PATH_NOT_EMPTY = "路径不能为空";
 }
