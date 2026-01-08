@@ -15,8 +15,8 @@ import org.springframework.web.multipart.MultipartFile;
 
 import javax.annotation.Resource;
 import javax.servlet.http.HttpServletRequest;
-import javax.validation.constraints.NotNull;
 import java.io.IOException;
+import java.util.List;
 
 @RestController
 public class ImageController {
@@ -44,7 +44,7 @@ public class ImageController {
     }
 
     @PostMapping("/uploadImage")
-    public R<String> uploadImage(MultipartFile file, @NotNull String destPath) {
+    public R<String> uploadImage(@RequestParam("file") List<MultipartFile> file, @RequestParam("destPath") String destPath) {
         try {
             imageService.uploadImage(file, destPath);
             return R.ok("upload success");
@@ -54,12 +54,12 @@ public class ImageController {
     }
 
     @PostMapping("/removeImage")
-    @AccessLog(module = "img manage" ,description = "delete image")
+    @AccessLog(module = "img manage", description = "delete image")
     public R<String> removeImage(@RequestBody OptDto dto, HttpServletRequest request) {
         try {
-            if(StringUtils.isEmpty(dto.getPath())) throw new IllegalArgumentException(Constants.PATH_NOT_EMPTY);
-            return R.ok(imageService.removeImage(dto ,request));
-        }catch (Exception e){
+            if (StringUtils.isEmpty(dto.getPath())) throw new IllegalArgumentException(Constants.PATH_NOT_EMPTY);
+            return R.ok(imageService.removeImage(dto, request));
+        } catch (Exception e) {
             return R.fail(e.getMessage());
         }
     }
@@ -67,9 +67,9 @@ public class ImageController {
     @PostMapping("/shareImage")
     public R<String> shareImage(@RequestBody OptDto dto, HttpServletRequest request) {
         try {
-            if(StringUtils.isEmpty(dto.getPath())) throw new IllegalArgumentException(Constants.PATH_NOT_EMPTY);
-            return R.ok(imageService.shareImage(dto ,request));
-        }catch (Exception e){
+            if (StringUtils.isEmpty(dto.getPath())) throw new IllegalArgumentException(Constants.PATH_NOT_EMPTY);
+            return R.ok(imageService.shareImage(dto, request));
+        } catch (Exception e) {
             return R.fail(e.getMessage());
         }
     }
@@ -85,7 +85,7 @@ public class ImageController {
     }
 
     @PostMapping("/deleteDir")
-    @AccessLog(module = "img manage" ,description = "remove dir")
+    @AccessLog(module = "img manage", description = "remove dir")
     public R<String> deleteDir(@RequestBody DirDto dto) {
         try {
             imageService.deleteDir(dto);

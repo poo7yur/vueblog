@@ -9,13 +9,14 @@ import org.springframework.web.multipart.MultipartFile;
 
 import javax.servlet.http.HttpServletRequest;
 import java.io.IOException;
+import java.util.List;
 
 public interface ImageService {
     DirUtil.Node scanner(String path, HttpServletRequest request) throws IOException;
 
     PageImageVo listImages(ImageDto dto);
 
-    void uploadImage(MultipartFile file, String destPath) throws IOException;
+    void uploadImage(List<MultipartFile> files, String destPath) throws IOException;
 
     void createDir(DirDto dto) throws IOException;
 

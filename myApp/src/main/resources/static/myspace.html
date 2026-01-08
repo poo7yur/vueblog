@@ -441,6 +441,7 @@
           document.getElementById("spaceContent").textContent =
             "服务器连接失败，请稍后重试";
         }
+        initUpload();
       });
 
       // ========== 核心方法1：递归渲染树形结构 ==========
@@ -658,7 +659,7 @@
           // 处理响应
           if (response.ok) {
             const result = await response.json();
-            showTip("success" ,"分享成功");
+            showTip("success", "分享成功");
           } else {
             throw new Error(`请求失败：${response.status}`);
           }
@@ -750,67 +751,6 @@
               contextMenu.style.display = "none";
             }
           });
-
-        // 4. 上传图片按钮：触发文件选择框
-        uploadBtn.addEventListener("click", () => {
-          fileInput.click();
-        });
-
-        // 5. 选择图片后：校验格式+调用上传接口
-        fileInput.addEventListener("change", async function () {
-          const files = this.files;
-          if (files.length === 0) return;
-
-          // 校验文件格式（仅允许jpg/jpeg/png）
-          const validFiles = Array.from(files).filter((file) => {
-            const type = file.type;
-            return (
-              type === "image/jpg" ||
-              type === "image/jpeg" ||
-              type === "image/png"
-            );
-          });
-          if (validFiles.length === 0) {
-            showTip("error", "请选择jpg/jpeg/png格式的图片！");
-            return;
-          }
-
-          // 构造上传FormData（MultipartFile格式）
-          const formData = new FormData();
-          validFiles.forEach((file) => formData.append("file", file));
-          const rootName = spaceData.name;
-          const rootIndex = currentPath.indexOf(rootName);
-
-          const relativePath = currentPath.substring(rootIndex);
-
-          const destPath = "/" + relativePath.replace(/\\/g, "/") + "/";
-
-          formData.append("destPath", destPath);
-          console.log("最终传递的destPath：", destPath);
-
-          // 调用后端上传接口（POST）
-          try {
-            const res = await fetch("/uploadImage", {
-              method: "POST",
-              headers: {
-                token: localStorage.getItem("userToken"), // 携带token
-              },
-              body: formData, // 图片+路径参数
-            });
-            const result = await res.json();
-            if (result.code === 0) {
-              showTip("success", "图片上传成功！");
-              this.value = ""; // 重置文件选择框
-              // ✅ 上传成功后，自动刷新当前文件夹的图片列表
-              loadFolderImg(currentPath);
-            } else {
-              showTip("error", `上传失败：${result.msg}`);
-            }
-          } catch (err) {
-            console.error("上传失败：", err);
-            showTip("error", "服务器连接失败，图片上传失败");
-          }
-        });
       }
 
       // ========== 新增核心方法：调用新建文件夹接口 ==========
@@ -989,6 +929,109 @@
           loadFolderImg(currentFolderPath); // 重新加载当前文件夹的对应页
         }
       });
+
+      function initUpload() {
+        const uploadBtn = document.getElementById("uploadBtn"); // 上传按钮
+        const fileInput = document.getElementById("fileInput"); // 文件选择框
+
+        // 1. 给文件输入框添加multiple属性，支持多选
+        fileInput.setAttribute("multiple", "multiple");
+
+        // 上传图片按钮：触发文件选择框
+        uploadBtn.addEventListener("click", () => {
+          fileInput.click();
+        });
+
+        // 2. 选择图片后：批量校验格式+调用上传接口
+        fileInput.addEventListener("change", async function () {
+          const files = this.files;
+          if (files.length === 0) return;
+
+          // 禁用上传按钮，避免重复提交
+          uploadBtn.disabled = true;
+          uploadBtn.textContent = "上传中...";
+
+          try {
+            // 批量校验文件格式（仅允许jpg/jpeg/png）
+            const validFiles = [];
+            const invalidFiles = [];
+            Array.from(files).forEach((file) => {
+              const type = file.type;
+              if (
+                type === "image/jpg" ||
+                type === "image/jpeg" ||
+                type === "image/png"
+              ) {
+                validFiles.push(file);
+              } else {
+                invalidFiles.push(file.name);
+              }
+            });
+
+            // 提示无效文件（但不中断有效文件的上传）
+            if (invalidFiles.length > 0) {
+              showTip(
+                "warning",
+                `以下文件格式无效，已跳过：${invalidFiles.join(", ")}`
+              );
+            }
+
+            // 无有效文件则直接返回
+            if (validFiles.length === 0) {
+              showTip("error", "请选择jpg/jpeg/png格式的图片！");
+              return;
+            }
+
+            // 构造上传FormData（批量添加文件）
+            const formData = new FormData();
+            // 批量添加文件：后端MultipartFile列表对应"file"参数名
+            validFiles.forEach((file) => {
+              formData.append("file", file);
+            });
+
+            // 构造目标路径（逻辑与原代码一致）
+            const rootName = spaceData.name;
+            const rootIndex = currentPath.indexOf(rootName);
+            const relativePath = currentPath.substring(rootIndex);
+            const destPath = "/" + relativePath.replace(/\\/g, "/") + "/";
+            formData.append("destPath", destPath);
+            console.log("最终传递的destPath：", destPath);
+            console.log(
+              `本次选择${files.length}个文件，有效文件${validFiles.length}个`
+            );
+
+            // 调用后端批量上传接口（POST）
+            const res = await fetch("/uploadImage", {
+              method: "POST",
+              headers: {
+                token: localStorage.getItem("userToken"), // 携带token
+                // 注意：FormData上传时不要手动设置Content-Type，浏览器会自动添加正确的boundary
+              },
+              body: formData, // 批量图片+路径参数
+            });
+
+            const result = await res.json();
+            if (result.code === 0) {
+              showTip(
+                "success",
+                `批量上传成功！共上传${validFiles.length}张图片`
+              );
+              // 上传成功后刷新当前文件夹图片列表
+              loadFolderImg(currentPath);
+            } else {
+              showTip("error", `批量上传失败：${result.msg}`);
+            }
+          } catch (err) {
+            console.error("批量上传失败：", err);
+            showTip("error", "服务器连接失败，图片批量上传失败");
+          } finally {
+            // 无论成功失败，重置状态
+            this.value = ""; // 清空文件选择框
+            uploadBtn.disabled = false; // 启用上传按钮
+            uploadBtn.textContent = "上传图片"; // 恢复按钮文字
+          }
+        });
+      }
     </script>
   </body>
 </html>

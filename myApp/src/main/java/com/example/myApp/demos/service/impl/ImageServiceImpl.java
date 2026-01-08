@@ -80,42 +80,87 @@ public class ImageServiceImpl implements ImageService {
      * destPath= '/adm/02/021/'
      */
     @Override
-    public void uploadImage(MultipartFile file, String destPath) throws IOException {
-        String userName = destPath.split("/")[1];
-        if (StringUtils.isEmpty(userName)) throw new IllegalArgumentException("文件格式非法");
+    public void uploadImage(List<MultipartFile> files, String destPath) throws IOException {
+        // 1. 前置校验：文件不能为空
+        if (files == null || files.isEmpty()) throw new IllegalArgumentException("待上传文件不能为空");
+        // 2. 解析用户名并校验
+        String[] pathSegments = destPath.split("/");
+        if (pathSegments.length < 2 || StringUtils.isEmpty(pathSegments[1])) {
+            throw new IllegalArgumentException(Constants.ILLEGAl_OPT);
+        }
+        String userName = pathSegments[1];
+
+        // 3. 校验目标目录：不允许有子目录
+        if (checkDirHasChildDir(destPath)) throw new RuntimeException(Constants.NOT_ALLOWED);
+
+        // 4. 空间校验相关常量
+        long div = 1024 * 1024; // 1MB = 1024*1024 字节
         Path userSpace = Paths.get(fileDir, userName);
-        //判断目标路径下是否有子目录 有的话不让放图片
-        if (checkDirHasChildDir(destPath)) throw new RuntimeException("目标目录下不允许放图片");
-        long div = 1024 * 1024;
-        /*计算已用空间 & 校验额度（user表里配了额度，单位 MB） */
+
+        // 4.1 计算用户已使用空间（MB）
         long usedMb = Files.exists(userSpace)
                 ? Files.walk(userSpace)
                 .filter(Files::isRegularFile)
                 .mapToLong(p -> p.toFile().length())
                 .sum() / div
                 : 0;
+
+        // 4.2 获取用户空间额度
         User user = userMapper.findUser(userName);
+        if (user == null) throw new RuntimeException(Constants.USER_NOT_FIND);
         double defaultMb = user.getDefaultMb();
-        long fileSizeMb = file.getSize() / div;
         double availableMb = defaultMb - usedMb;
-        String tip = "还剩余：" + availableMb + "mb";
-        if (usedMb + fileSizeMb > defaultMb) throw new RuntimeException("您的空间不足" + tip);
-        /*使用相对路径 目标目录不存在则一次性建好（支持多级） */
+        String tip = "还剩余：" + availableMb + "MB";
+
+        // 4.3 计算所有待上传文件的总大小（MB）
+        long totalFileSizeMb = 0;
+        for (MultipartFile file : files) {
+            // 过滤空文件
+            if (file.isEmpty()) {
+                continue;
+            }
+            totalFileSizeMb += file.getSize() / div;
+            // 额外校验：单个文件大小（可选，根据业务需求添加）
+            if (file.getSize() / div > 10) throw new RuntimeException("单个文件大小不能超过10MB");
+        }
+
+        // 4.4 校验总空间是否足够
+        if (usedMb + totalFileSizeMb > defaultMb)
+            throw new RuntimeException("您的空间不足，" + tip + "，本次上传需要" + totalFileSizeMb + "MB");
+
+        // 5. 构建目标目录路径
         String relative = destPath.replaceFirst("^/", "");
         if (relative.startsWith(userName)) {
             relative = relative.substring(userName.length()).replaceFirst("^/", "");
         }
         Path targetDir = userSpace.resolve(relative);
+        // 确保目标目录存在（支持多级目录）
         Files.createDirectories(targetDir);
-        String origName = file.getOriginalFilename();
-        String ext = "";
-        if (origName != null && origName.lastIndexOf('.') != -1) {
-            ext = origName.substring(origName.lastIndexOf('.'));
+
+        for (MultipartFile file : files) {
+            // 跳过空文件
+            if (file.isEmpty()) {
+                continue;
+            }
+
+            try {
+                // 6.1 处理文件名：生成随机名 + 保留原后缀
+                String origName = file.getOriginalFilename();
+                String ext = "";
+                if (origName != null && origName.lastIndexOf('.') != -1) {
+                    ext = origName.substring(origName.lastIndexOf('.'));
+                }
+                String newName = RandomUtil.randomString(18) + ext;
+
+                // 6.2 写盘：保存文件到目标目录
+                Path targetFile = targetDir.resolve(newName);
+                file.transferTo(targetFile.toFile());
+
+            } catch (Exception e) {
+                // 异常处理策略：中断全部上传（原子性）
+                throw new RuntimeException("文件上传失败：" + file.getOriginalFilename() + "，原因：" + e.getMessage(), e);
+            }
         }
-        String newName = RandomUtil.randomString(18) + ext;
-        //真正写盘
-        Path targetFile = targetDir.resolve(newName);
-        file.transferTo(targetFile.toFile());
     }
 
     @Override
@@ -140,7 +185,7 @@ public class ImageServiceImpl implements ImageService {
             boolean hasFiles = stream.anyMatch(Files::isRegularFile);
 
             if (hasFiles) {
-                throw new IllegalArgumentException("当前目录包含文件，不允许创建新子文件夹");
+                throw new IllegalArgumentException(Constants.NOT_ALLOWED);
             }
         }
         // 检查要创建的目录是否已存在

@@ -307,10 +307,9 @@ loginBtn.addEventListener("click", async () => {
 
     //alert("登录成功！Token已存储");
     loginModalMask.style.display = "none"; // 关闭弹窗
-    treeContainer.innerHTML = "";
-    fetchData();
     // 关键：登录成功后调用视图更新函数
     updateUserView(username, userId);
+    window.location.reload();
   } catch (error) {
     console.error("登录异常：", error);
     alert("登录失败：" + error.message);
@@ -526,7 +525,6 @@ logoutBtn.addEventListener("click", function (e) {
     localStorage.removeItem("currentUserId");
     // 刷新菜单状态
     initUserMenu();
-    fetchData();
     window.location.reload();
   }
 });
