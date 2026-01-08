@@ -8,10 +8,7 @@ import java.util.List;
 public class PageImageVo {
 
     private List<String> images;
-
     private int total;
-
     private int pageNo;
-
     private int pageSize;
 }

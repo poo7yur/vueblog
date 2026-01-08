@@ -2,11 +2,9 @@ package com.example.myApp.demos.controller;
 
 import com.example.myApp.demos.aop.AccessLog;
 import com.example.myApp.demos.entity.MsgEntity;
-import com.example.myApp.demos.entity.OrderDto;
 import com.example.myApp.demos.entity.R;
-import com.example.myApp.demos.mq.MyLogger;
 import com.example.myApp.demos.service.FileOptService;
-import com.example.myApp.demos.service.LogEventService;
+import com.example.myApp.demos.service.LogService;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -18,26 +16,12 @@ import java.util.List;
 @RestController
 public class MessageController {
 
-    @Resource
-    private MyLogger myLogger;
 
     @Resource
-    private LogEventService logEventService;
+    private LogService logService;
 
     @Resource
     private FileOptService fileOptService;
-
-    @GetMapping("/do")
-    public R<String> doSomething() {
-        myLogger.log("INFO", "querySomething");
-        return R.ok("do");
-    }
-
-    @PostMapping("/order")
-    @AccessLog(module = "order manage", description = "create order")
-    public R<String> order(@RequestBody OrderDto order) {
-        return R.ok("create order");
-    }
 
     @PostMapping("/upload")
     @AccessLog(module = "file manage", description = "upload file")
@@ -66,7 +50,7 @@ public class MessageController {
     public R<List<MsgEntity>> getMsg(HttpServletRequest request) {
         String userId = request.getHeader("userId");
         try {
-            return R.ok(logEventService.getMsg(userId));
+            return R.ok(logService.getMsg(userId));
         } catch (Exception e) {
             return R.fail(e.getMessage());
         }

@@ -1,6 +1,7 @@
 package com.example.myApp.demos;
 
 public class Constants {
+
     public static final String PWD_NAME_NOT_NULL = "用户名密码不能空";
 
     public static final String USER_NOT_FIND = "用户未找到";
@@ -13,5 +14,11 @@ public class Constants {
 
     public static final String ILLEGAl_OPT = "非法操作";
 
+    public static final String TOKEN_EXPIRE = "请重新登录";
+
     public static final String PATH_NOT_EMPTY = "路径不能为空";
+
+    public static final String FILE_NOT_FOUND = "未找到文件";
+
+    public static final String ACCESS_LOG_TOPIC = "access-log-topic";
 }

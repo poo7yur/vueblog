@@ -7,7 +7,7 @@ import com.example.myApp.demos.dto.ImageDto;
 import com.example.myApp.demos.dto.OptDto;
 import com.example.myApp.demos.entity.R;
 import com.example.myApp.demos.service.ImageService;
-import com.example.myApp.demos.util.DirScannerUtil;
+import com.example.myApp.demos.util.DirUtil;
 import com.example.myApp.demos.vo.PageImageVo;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.web.bind.annotation.*;
@@ -25,7 +25,7 @@ public class ImageController {
     private ImageService imageService;
 
     @GetMapping("/scanner")
-    public R<DirScannerUtil.Node> scanner(@RequestParam(required = false) String path, HttpServletRequest request) {
+    public R<DirUtil.Node> scanner(@RequestParam(required = false) String path, HttpServletRequest request) {
         try {
             return R.ok(imageService.scanner(path, request));
         } catch (IOException e) {
@@ -59,6 +59,16 @@ public class ImageController {
         try {
             if(StringUtils.isEmpty(dto.getPath())) throw new IllegalArgumentException(Constants.PATH_NOT_EMPTY);
             return R.ok(imageService.removeImage(dto ,request));
+        }catch (Exception e){
+            return R.fail(e.getMessage());
+        }
+    }
+
+    @PostMapping("/shareImage")
+    public R<String> shareImage(@RequestBody OptDto dto, HttpServletRequest request) {
+        try {
+            if(StringUtils.isEmpty(dto.getPath())) throw new IllegalArgumentException(Constants.PATH_NOT_EMPTY);
+            return R.ok(imageService.shareImage(dto ,request));
         }catch (Exception e){
             return R.fail(e.getMessage());
         }

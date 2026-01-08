@@ -6,11 +6,8 @@ import lombok.Data;
 public class ImageDto {
 
     private String path;
-
     private String userId;
-
     private int pageSize=10;
-
     private int pageNo=1;
 
 }

@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.example.myApp.demos.mapper.ImageMapper">
+
+    <insert id="shareImg">
+        insert into share_image(id ,source_path ,flg ,owner_id ,update_time ,remark ,share_path) values (#{si.id} ,#{si.sourcePath} ,#{si.flg} ,#{si.ownerId} ,#{si.updateTime} ,#{si.remark} ,#{si.sharePath})
+    </insert>
+</mapper>

@@ -1,8 +1,9 @@
 package com.example.myApp.demos.aop;
 
 import com.alibaba.fastjson.JSONObject;
+import com.example.myApp.demos.Constants;
 import com.example.myApp.demos.entity.LogEntity;
-import com.example.myApp.demos.mapper.LogEventMapper;
+import com.example.myApp.demos.mapper.LogMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.rocketmq.client.producer.SendCallback;
@@ -29,10 +30,9 @@ import java.util.*;
 public class AssessLogAspect {
 
     private final RocketMQTemplate rocketMQTemplate;
-    private final static String TOPIC = "access-log-topic";
 
     @Resource
-    private LogEventMapper logEventMapper;
+    private LogMapper logMapper;
 
     @Pointcut("@annotation(accessLog)")
     public void pointcut(AccessLog accessLog) {
@@ -56,14 +56,14 @@ public class AssessLogAspect {
             Object result = joinPoint.proceed();
             String resultJson = JSONObject.toJSONString(result);
             logEntity.setResult(resultJson);
-            logEventMapper.saveAccessLog(logEntity);
+            logMapper.saveAccessLog(logEntity);
             return result;
         } catch (Exception e) {
             logEntity.setResult(e.getMessage());
             throw e;
         } finally {
             logEntity.setResult(JSONObject.toJSONString(logEntity.getResult()));
-            rocketMQTemplate.asyncSend(TOPIC, logEntity, new SendCallback() {
+            rocketMQTemplate.asyncSend(Constants.ACCESS_LOG_TOPIC, logEntity, new SendCallback() {
                 @Override
                 public void onSuccess(SendResult sendResult) {
                     System.out.println("AccessLog sent ok");

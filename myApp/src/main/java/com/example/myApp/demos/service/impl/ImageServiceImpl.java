@@ -5,10 +5,12 @@ import com.example.myApp.demos.Constants;
 import com.example.myApp.demos.dto.DirDto;
 import com.example.myApp.demos.dto.ImageDto;
 import com.example.myApp.demos.dto.OptDto;
+import com.example.myApp.demos.entity.ShareImage;
 import com.example.myApp.demos.entity.User;
+import com.example.myApp.demos.mapper.ImageMapper;
 import com.example.myApp.demos.mapper.UserMapper;
 import com.example.myApp.demos.service.ImageService;
-import com.example.myApp.demos.util.DirScannerUtil;
+import com.example.myApp.demos.util.DirUtil;
 import com.example.myApp.demos.util.JwtUtil;
 import com.example.myApp.demos.vo.PageImageVo;
 import io.jsonwebtoken.Claims;
@@ -26,10 +28,7 @@ import java.nio.file.DirectoryStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.ArrayList;
-import java.util.Comparator;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 import java.util.stream.Stream;
 
 @Service
@@ -41,6 +40,9 @@ public class ImageServiceImpl implements ImageService {
     @Resource
     private UserMapper userMapper;
 
+    @Resource
+    private ImageMapper imageMapper;
+
     /**
      * 扫描指定路径下的目录结构并构建树形节点
      *
@@ -49,23 +51,23 @@ public class ImageServiceImpl implements ImageService {
      * @return 包含目录结构的树形节点对象
      */
     @Override
-    public DirScannerUtil.Node scanner(String path, HttpServletRequest request) throws IOException {
+    public DirUtil.Node scanner(String path, HttpServletRequest request) throws IOException {
         boolean isPath = StringUtils.isEmpty(path);
         String fullPath = isPath ? fileDir : fileDir + path;
         //如果是当前用户直接进他的空间不过滤
-        if (!isPath) return DirScannerUtil.scannerTree(fullPath);
+        if (!isPath) return DirUtil.scannerTree(fullPath);
         //用户名集合
         Set<String> userNames = userMapper.queryNames();
         //解析登录状态
         String loginUser = parseUserFromToken(request);
         //递归目录
-        return DirScannerUtil.buildTree(Paths.get(fullPath), loginUser, userNames);
+        return DirUtil.buildTree(Paths.get(fullPath), loginUser, userNames);
     }
 
     @Override
     public PageImageVo listImages(ImageDto dto) {
         List<String> imgUrls = new ArrayList<>();
-        int total = DirScannerUtil.listImages(dto, imgUrls);
+        int total = DirUtil.listImages(dto, imgUrls);
         PageImageVo pageImageVo = new PageImageVo();
         BeanUtils.copyProperties(dto, pageImageVo);
         pageImageVo.setTotal(total);
@@ -171,25 +173,53 @@ public class ImageServiceImpl implements ImageService {
     public String removeImage(OptDto dto, HttpServletRequest request) throws IOException {
         // 1. 拿到真实文件路径
         Path targetPath = parseRealPath(dto.getPath());
-
         // 2. 安全校验：必须位于当前登录用户的空间内
         String username = parseUserFromToken(request);
         Path userSpace = Paths.get(fileDir, username).toAbsolutePath();
-        if (!targetPath.toAbsolutePath().startsWith(userSpace)) {
-            throw new RuntimeException(Constants.ILLEGAl_OPT);
-        }
-
+        if (!targetPath.toAbsolutePath().startsWith(userSpace)) throw new RuntimeException(Constants.ILLEGAl_OPT);
         // 3. 删除
         Files.deleteIfExists(targetPath);
         return "删除成功";
     }
 
+    @Override
+    public String shareImage(OptDto dto, HttpServletRequest request) throws IOException {
+        // 从token里校验当前用户是否有权限
+        String username = parseUserFromToken(request);
+        if (StringUtils.isEmpty(username)) throw new RuntimeException(Constants.TOKEN_EXPIRE);
+        Path fullPath = parseRealPath(dto.getPath());
+        Path userSpace = Paths.get(fileDir, username).toAbsolutePath();
+        if (!Files.exists(fullPath)) throw new RuntimeException(Constants.FILE_NOT_FOUND);
+        if (!fullPath.toAbsolutePath().startsWith(userSpace)) throw new RuntimeException(Constants.ILLEGAl_OPT);
+
+        // 写share_image表记录共享操作
+        String uid = parseUidFromToken(request);
+        ShareImage shareImage = new ShareImage();
+        String rid = RandomUtil.randomString(10);
+        shareImage.setId(rid);
+        shareImage.setOwnerId(uid);
+        shareImage.setFlg(0);
+        shareImage.setUpdateTime(new Date());
+        shareImage.setSourcePath(fullPath.toString());
+        shareImage.setRemark(dto.getRemark());
+
+        // 把图片复制一份放到share目录下
+        Path shareDir = Paths.get(fileDir, "share");
+        if (!Files.exists(shareDir)) Files.createDirectories(shareDir);
+        String fileName = fullPath.getFileName().toString();
+        String copyFileName = rid + "_" + fileName;
+        Path targetPath = shareDir.resolve(copyFileName);
+        Files.copy(fullPath, targetPath);
+        String sharePath = targetPath.toAbsolutePath().toString();
+        shareImage.setSharePath(sharePath);
+        imageMapper.shareImg(shareImage);
+        return sharePath;
+    }
+
     private boolean checkDirHasChildDir(String dirPath) {
         Path dir = Paths.get(fileDir + dirPath);
-
         // 检查路径是否存在且是目录
         if (!Files.exists(dir) || !Files.isDirectory(dir)) return false;
-
         try (DirectoryStream<Path> stream = Files.newDirectoryStream(dir)) {
             for (Path path : stream) {
                 if (Files.isDirectory(path)) {
@@ -203,9 +233,7 @@ public class ImageServiceImpl implements ImageService {
     }
 
     private Path parseRealPath(String staticPath) {
-        if (!staticPath.startsWith("/static/")) {
-            throw new RuntimeException(Constants.ILLEGAl_OPT);
-        }
+        if (!staticPath.startsWith("/static/")) throw new RuntimeException(Constants.ILLEGAl_OPT);
         // 去掉 /static 前缀得到用户路径
         String relative = staticPath.substring("/static".length());
         return Paths.get(fileDir, relative).normalize(); //返回文件全路径
@@ -219,6 +247,19 @@ public class ImageServiceImpl implements ImageService {
         try {
             Claims claims = JwtUtil.parseToken(token);
             return claims.getSubject();//返回用户名
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    private String parseUidFromToken(HttpServletRequest request) {
+        String token = request.getHeader("token");
+        if (StringUtils.isBlank(token)) {
+            return null;
+        }
+        try {
+            Claims claims = JwtUtil.parseToken(token);
+            return claims.get("userId").toString(); //返回用户id
         } catch (Exception e) {
             return null;
         }

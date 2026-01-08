@@ -6,6 +6,7 @@ import java.util.Date;
 
 @Data
 public class UserVo {
+
     private String userId;
     private String name;
     private String email;

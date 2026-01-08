@@ -12,7 +12,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 
-public class DirScannerUtil {
+public class DirUtil {
 
     public static Node buildTree(Path dir, String loginUser, Set<String> allUserNames) {
         String dirName = dir.getFileName().toString();

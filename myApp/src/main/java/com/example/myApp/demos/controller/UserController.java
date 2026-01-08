@@ -1,5 +1,6 @@
 package com.example.myApp.demos.controller;
 
+import com.example.myApp.demos.aop.AccessLog;
 import com.example.myApp.demos.dto.LoginDto;
 import com.example.myApp.demos.dto.RegisterDto;
 import com.example.myApp.demos.entity.R;
@@ -18,6 +19,7 @@ public class UserController {
     private UserService userService;
 
     @PostMapping("/addUser")
+    @AccessLog(module = "user manage" ,description = "add user")
     public R<String> addUser(@RequestBody RegisterDto registerDto) {
         try{
             String uid = userService.addUsr(registerDto);
@@ -28,6 +30,7 @@ public class UserController {
     }
 
     @PostMapping("/login")
+    @AccessLog(module = "user manage" ,description = "user login")
     public R<UserVo> login(@RequestBody LoginDto loginDto) {
         try{
             UserVo userVo =  userService.login(loginDto);

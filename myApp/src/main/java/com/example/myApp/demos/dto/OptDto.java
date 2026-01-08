@@ -6,6 +6,6 @@ import lombok.Data;
 public class OptDto {
 
     private String path;
-
     private String type;
+    private String remark;
 }

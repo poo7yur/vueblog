@@ -63,7 +63,7 @@
         cursor: pointer;
         font-size: 12px;
         font-weight: bold;
-        opacity: 0; /* 默认隐藏 */
+        opacity: 0;
         transition: opacity 0.2s;
         z-index: 10;
       }
@@ -74,6 +74,33 @@
 
       .image-delete-btn:hover {
         background-color: rgba(255, 0, 0, 1); /* 悬浮加深红色 */
+      }
+
+      /* 分享按钮（对勾）样式 */
+      .image-share-btn {
+        position: absolute;
+        top: 5px; /* 调整数值，避免太贴边 */
+        left: 5px; /* 调整数值，避免太贴边 */
+        width: 24px; /* 增大尺寸，更容易点击 */
+        height: 24px;
+        background-color: rgba(0, 180, 0, 0.9); /* 提高不透明度，更醒目 */
+        color: white;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        font-size: 12px;
+        opacity: 0;
+        transition: opacity 0.3s ease; /* 更顺滑的过渡 */
+        z-index: 20; /* 确保层级最高，不会被遮挡 */
+        /* 新增：防止按钮被选中或遮挡 */
+        pointer-events: auto;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2); /* 增加阴影，更突出 */
+      }
+
+      .image-item:hover .image-share-btn {
+        opacity: 1;
       }
 
       /* 悬停微交互（可选）：鼠标放上去图片稍微放大，增加视觉反馈 */
@@ -515,6 +542,7 @@
         nextBtn.disabled = currentPage >= totalPages || totalPages === 0;
       }
 
+      //根据路径渲染图片
       function renderImageGrid(filePathList) {
         const contentArea = document.getElementById("contentArea");
         const baseUrl = "/static/";
@@ -548,10 +576,12 @@
         let html = `<div class="image-grid">`;
 
         webPathList.forEach((src) => {
-        html += `
+          html += `
           <div class="image-item" onclick="openImage('${src}')">
             <!-- 删除按钮：默认隐藏，悬浮显示 -->
             <div class="image-delete-btn" onclick="event.stopPropagation(); deleteImage('${src}')">×</div>
+            <!-- 分享按钮：对勾 -->
+            <div class="image-share-btn" onclick="event.stopPropagation(); shareImage('${src}')">✓</div>
             <img src="${src}" loading="lazy">
           </div>
         `;
@@ -592,6 +622,49 @@
         } catch (err) {
           console.error("删除图片失败：", err);
           showTip("error", "服务器连接失败，图片删除失败");
+        }
+      }
+
+      // 分享图片核心函数
+      async function shareImage(src) {
+        try {
+          // 弹出输入框获取分享标题
+          const remark = prompt("请输入分享标题", "");
+
+          // 用户取消输入
+          if (remark === null) return;
+
+          // 验证输入不为空
+          if (!remark.trim()) {
+            alert("分享标题不能为空！");
+            return;
+          }
+          const userToken = localStorage.getItem("userToken");
+          const requestData = {
+            path: src,
+            remark: remark.trim(),
+          };
+
+          // 调用分享接口
+          const response = await fetch("/shareImage", {
+            method: "POST",
+            headers: {
+              token: userToken,
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify(requestData),
+          });
+
+          // 处理响应
+          if (response.ok) {
+            const result = await response.json();
+            showTip("success" ,"分享成功");
+          } else {
+            throw new Error(`请求失败：${response.status}`);
+          }
+        } catch (error) {
+          alert(`分享失败：${error.message}`);
+          console.error("分享接口调用失败：", error);
         }
       }
 
