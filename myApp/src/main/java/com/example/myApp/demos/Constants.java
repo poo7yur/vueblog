@@ -6,6 +6,8 @@ public class Constants {
 
     public static final String USER_NOT_FIND = "用户未找到";
 
+    public static final String PARM_NOT_NULL = "请求参数不能为空";
+
     public static final String PWD_NAME_ERROR ="用户名密码错误";
 
     public static final String MSG_NOT_SUBSCRIBE = "未订阅消息";
@@ -23,4 +25,6 @@ public class Constants {
     public static final String FILE_NOT_FOUND = "未找到文件!";
 
     public static final String ACCESS_LOG_TOPIC = "access-log-topic";
+
+    public static final String IMAGE_LIKE_NOTICE_TOPIC = "image-like-notice-topic";
 }

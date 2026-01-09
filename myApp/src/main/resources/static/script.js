@@ -1,5 +1,10 @@
 // 全局变量，用于存储从接口获取的根数据
 let rootData = null;
+let currentQuery = {
+  keyword: "",
+  pageNum: 1,
+  pageSize: 10,
+};
 
 // 页面加载完成后执行
 document.addEventListener("DOMContentLoaded", function () {
@@ -172,15 +177,62 @@ function renderImageGrid(filePathList) {
   // 使用 CSS Grid 进行平铺布局
   let html = `<div class="image-grid">`;
   webPathList.forEach((src) => {
+    // 获取文件名作为 path 参数发送给后端
+    const fileName = src.substring(src.lastIndexOf("/") + 1);
+    const hasUnderscore = src.includes("share");
+    const token = localStorage.getItem("userToken");
+    const heartHtml = token && hasUnderscore
+      ? `<div class="like-animation" id="like-${fileName}" onclick="handleLike(event, '${src}', '${fileName}')">❤️</div>`
+      : "";
     html += `
-            <div class="image-item">
-                <img src="${src}" onclick="openImage('${src}')">
-            </div>
-        `;
+          <div class="image-item">
+                         <img src="${src}" onclick="openImage('${src}')">
+                         ${heartHtml}
+           </div>
+      `;
   });
   html += `</div>`;
 
   contentArea.innerHTML = html;
+}
+
+//点赞逻辑
+async function handleLike(event, imgSrc, fileName) {
+  event.stopPropagation();
+
+  const heartEl = document.getElementById(`like-${fileName}`);
+  if (!heartEl) return;
+
+  // 触发动画
+  heartEl.style.display = "block";
+  heartEl.style.animation = "none";
+  void heartEl.offsetWidth; // 强制重排
+  heartEl.style.animation = "likePop 0.8s ease-out forwards";
+
+  // 调用后端接口
+  try {
+    const response = await fetch("/likeImage", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        token: localStorage.getItem("token"),
+      },
+      body: JSON.stringify({ path: fileName }),
+    });
+
+    const result = await response.json();
+    alert(result.data);
+
+    setTimeout(() => {
+      heartEl.style.display = "none"; // 动画结束后隐藏
+    }, 2000);
+  } catch (error) {
+    alert(error);
+    heartEl.style.display = "none"; // 即使失败也隐藏动画
+    setTimeout(() => {
+      alert("请检查网络或权限");
+    }, 50);
+  }
 }
 
 function openImage(src) {
@@ -290,9 +342,9 @@ loginBtn.addEventListener("click", async () => {
     }
 
     const result = await response.json(); // 解析后端返回的JSON数据
-    if(result.code!==0) {
-        alert(result.msg);
-        return;
+    if (result.code !== 0) {
+      alert(result.msg);
+      return;
     }
     const token = result.data.token; // 提取Token（假设后端返回格式：{ "token": "xxx.yyy.zzz" }）
     const userId = result.data.userId;
@@ -408,43 +460,78 @@ closeMsgModal.addEventListener("click", () => {
   msgModal.style.display = "none";
   location.reload();
 });
-msgModal.addEventListener("click", (e) => {
-  if (e.target === msgModal) {
-    msgModal.style.display = "none";
-  }
-});
 
 closeRegModal.addEventListener("click", () => {
   registerModalMask.style.display = "none";
 });
+
 registerModalMask.addEventListener("click", (e) => {
   if (e.target === registerModalMask) {
     registerModalMask.style.display = "none";
   }
 });
 
-//调接口拉取数据
-function fetchMessages() {
-  fetch("/getMsg", {
-    headers: {
-      userId: localStorage.getItem("currentUserId"),
-    },
-  })
-    .then((response) => response.json())
-    .then((data) => {
-      if (data.code === 0) {
-        renderMessages(data.data);
-      } else {
-        showErrorMessage(data.msg);
-      }
-    })
-    .catch((error) => console.error("Error:", error));
+// 1. 搜索函数 (供按钮点击调用)
+function searchMessages() {
+  const keywordInput = document.getElementById("searchKeyword");
+  currentQuery.keyword = keywordInput.value.trim();
+  currentQuery.pageNum = 1; // 搜索时重置为第一页
+  fetchMessages();
 }
 
-//渲染消息表格
+// 2. 分页点击函数
+function goToPage(page) {
+  currentQuery.pageNum = page;
+  fetchMessages();
+}
+
+// 3. 核心：发送请求并处理分页
+function fetchMessages() {
+  // 显示加载状态 (可选)
+  document.getElementById("msgTableBody").innerHTML =
+    '<tr><td colspan="7">加载中...</td></tr>';
+
+  fetch("/getMsg", {
+    method: "POST",
+    headers: {
+      userId: localStorage.getItem("currentUserId"),
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      keyword: currentQuery.keyword,
+      pageNum: currentQuery.pageNum,
+      pageSize: currentQuery.pageSize,
+    }),
+  })
+    .then((response) => response.json())
+    .then((result) => {
+      if (result.code === 0) {
+        // 4. 渲染表格数据
+        renderMessages(result.data.list);
+
+        // 5. 渲染分页控件
+        renderPagination(result.data);
+      } else {
+        showErrorMessage(result.msg);
+      }
+    })
+    .catch((error) => {
+      console.error("Error:", error);
+      document.getElementById("msgTableBody").innerHTML =
+        '<tr><td colspan="7">请求失败，请重试</td></tr>';
+    });
+}
+
+// 6. 渲染表格数据
 function renderMessages(messages) {
   const tableBody = document.getElementById("msgTableBody");
   tableBody.innerHTML = "";
+
+  if (messages.length === 0) {
+    tableBody.innerHTML = '<tr><td colspan="7">暂无数据</td></tr>';
+    return;
+  }
+
   messages.forEach((msg) => {
     const row = document.createElement("tr");
     row.innerHTML = `
@@ -458,6 +545,46 @@ function renderMessages(messages) {
         `;
     tableBody.appendChild(row);
   });
+}
+
+// 7. 渲染分页控件 (核心逻辑)
+function renderPagination(pageInfo) {
+  const paginationContainer = document.getElementById("pagination");
+  let paginationHTML = "";
+
+  const { pageNum, pages, isFirstPage, isLastPage } = pageInfo;
+
+  // 上一页按钮
+  if (!isFirstPage) {
+    paginationHTML += `<button onclick="goToPage(${
+      pageNum - 1
+    })">&laquo; 上一页</button>`;
+  } else {
+    paginationHTML += `<span class="disabled">&laquo; 上一页</span>`;
+  }
+
+  // 页码按钮 (简单的逻辑：显示当前页前后各2页)
+  const startPage = Math.max(1, pageNum - 2);
+  const endPage = Math.min(pages, pageNum + 2);
+
+  for (let i = startPage; i <= endPage; i++) {
+    if (i === pageNum) {
+      paginationHTML += `<strong> ${i} </strong>`; // 当前页高亮
+    } else {
+      paginationHTML += `<button onclick="goToPage(${i})">${i}</button>`;
+    }
+  }
+
+  // 下一页按钮
+  if (!isLastPage) {
+    paginationHTML += `<button onclick="goToPage(${
+      pageNum + 1
+    })">下一页 &raquo;</button>`;
+  } else {
+    paginationHTML += `<span class="disabled">下一页 &raquo;</span>`;
+  }
+
+  paginationContainer.innerHTML = paginationHTML;
 }
 
 // 显示红色提示消息的函数
@@ -540,7 +667,8 @@ spaceLink.addEventListener("click", async function (e) {
   const userToken = localStorage.getItem("userToken");
   if (!currentUser || !userToken) {
     alert("请登录后查看我的空间");
-    return; // 未登录终止执行
+    loginModalMask.style.display = "flex"; // 直接弹出登录框
+    return;
   }
 
   // 已登录直接跳转到myspace.html，不再携带接口数据

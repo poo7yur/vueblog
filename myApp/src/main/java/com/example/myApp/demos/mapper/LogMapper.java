@@ -13,8 +13,10 @@ public interface LogMapper {
 
     void saveAccessLog(@Param("log") LogEntity log);
 
-    List<MsgEntity> getMsg(@Param("list") Set<String> ids);
+    List<MsgEntity> getMsg(@Param("list") Set<String> ids, @Param("kw") String keyword, @Param("userId") String userId);
 
     Set<String> getMsgGroupIds(@Param("userId") String userId);
+
+    void addLog(@Param("tMsg") MsgEntity msgEntity);
 
 }

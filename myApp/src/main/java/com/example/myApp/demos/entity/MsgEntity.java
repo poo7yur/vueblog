@@ -2,16 +2,15 @@ package com.example.myApp.demos.entity;
 
 import lombok.Data;
 
-import java.util.Date;
-
 @Data
 public class MsgEntity {
 
     private String msgId;
     private String msgContent;
-    private Date updateTime;
-    private int state;
-    private String createBy;
-    private String groupId;
+    private String updateTime;
+    private int state;//0未读 1已读 2失效
+    private String createBy;//消息创建人
+    private String groupId;//分组
+    private String userId;//消息接收人
     private int msgType;
 }

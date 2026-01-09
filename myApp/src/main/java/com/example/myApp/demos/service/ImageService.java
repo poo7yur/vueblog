@@ -26,4 +26,6 @@ public interface ImageService {
 
     String shareImage(OptDto dto ,HttpServletRequest request) throws IOException;
 
+    String likeImage(OptDto dto, HttpServletRequest request) throws IOException;
+
 }

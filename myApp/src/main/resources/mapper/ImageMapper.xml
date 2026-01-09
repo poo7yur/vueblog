@@ -5,4 +5,16 @@
     <insert id="shareImg">
         insert into share_image(id ,source_path ,flg ,owner_id ,update_time ,remark ,share_path) values (#{si.id} ,#{si.sourcePath} ,#{si.flg} ,#{si.ownerId} ,#{si.updateTime} ,#{si.remark} ,#{si.sharePath})
     </insert>
+
+    <select id="recordUserImgRel">
+        insert into user_img_rel(user_id ,img_id) values(#{t.userId} ,#{t.imgId})
+    </select>
+
+    <select id="queryOwnerId" resultType="java.lang.String">
+        select owner_id from share_image where id = #{param1}
+    </select>
+
+    <select id="checkUserImgRelExists" resultType="java.lang.Integer">
+        select count(1) from user_img_rel where user_id = #{uid} and img_id = #{id}
+    </select>
 </mapper>

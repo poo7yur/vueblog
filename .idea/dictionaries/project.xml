@@ -4,6 +4,7 @@
       <w>addr</w>
       <w>dest</w>
       <w>illeg</w>
+      <w>ondblclick</w>
       <w>timestp</w>
     </words>
   </dictionary>

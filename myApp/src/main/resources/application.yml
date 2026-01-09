@@ -34,6 +34,11 @@ rocketmq:
      send-message-timeout: 3000
      compress-message-body-threshold: 4096
      retry-times-when-send-failed: 2
+pagehelper:
+  helper-dialect: mysql
+  reasonable: true
+  supportMethodsArguments: true
+  params: count=countSql
 
 mybatis:
   mapper-locations: classpath:mapper/*.xml

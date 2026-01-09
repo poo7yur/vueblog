@@ -32,7 +32,10 @@
 <div class="msg-modal" id="msgModal">
     <div class="msg-modal-content">
         <span class="close-btn" id="closeMsgModal">&times;</span>
-        <h2>消息列表</h2>
+        <div>
+            <label for="searchKeyword"></label><input type="text" id="searchKeyword" placeholder="输入关键词搜索" />
+            <button onclick="searchMessages()">搜索</button>
+        </div>
         <table id="msgTable">
             <thead>
             <tr>
@@ -41,12 +44,16 @@
                 <th>时间</th>
                 <th>状态</th>
                 <th>创建者</th>
-                <th>群组ID</th>
+                <th>群组</th>
                 <th>类型</th>
             </tr>
             </thead>
             <tbody id="msgTableBody"></tbody>
         </table>
+        <!-- 分页区域 -->
+        <div id="pagination" style="margin-top: 20px; text-align: center;">
+            <!-- 分页按钮将由 JS 动态生成 -->
+        </div>
     </div>
 </div>
 

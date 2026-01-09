@@ -1,20 +1,27 @@
 package com.example.myApp.demos.service.impl;
 
 import cn.hutool.core.util.RandomUtil;
+import com.alibaba.fastjson.JSON;
 import com.example.myApp.demos.Constants;
 import com.example.myApp.demos.dto.DirDto;
 import com.example.myApp.demos.dto.ImageDto;
+import com.example.myApp.demos.dto.LikeNotice;
 import com.example.myApp.demos.dto.OptDto;
 import com.example.myApp.demos.entity.ShareImage;
 import com.example.myApp.demos.entity.User;
+import com.example.myApp.demos.entity.UserImgRel;
 import com.example.myApp.demos.mapper.ImageMapper;
 import com.example.myApp.demos.mapper.UserMapper;
+import org.apache.rocketmq.client.producer.SendResult;
+import org.apache.rocketmq.common.message.Message;
 import com.example.myApp.demos.service.ImageService;
 import com.example.myApp.demos.util.DirUtil;
 import com.example.myApp.demos.util.JwtUtil;
 import com.example.myApp.demos.vo.PageImageVo;
 import io.jsonwebtoken.Claims;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
+import org.apache.rocketmq.client.producer.DefaultMQProducer;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -24,14 +31,17 @@ import javax.annotation.Resource;
 import javax.servlet.http.HttpServletRequest;
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.DirectoryStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.text.SimpleDateFormat;
 import java.util.*;
 import java.util.stream.Stream;
 
 @Service
+@Slf4j
 public class ImageServiceImpl implements ImageService {
 
     @Value("${file.dir}")
@@ -42,6 +52,11 @@ public class ImageServiceImpl implements ImageService {
 
     @Resource
     private ImageMapper imageMapper;
+
+    @Resource
+    private DefaultMQProducer rocketMQProducer;
+
+    private static final SimpleDateFormat sdf = new  SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
 
     /**
      * 扫描指定路径下的目录结构并构建树形节点
@@ -259,6 +274,78 @@ public class ImageServiceImpl implements ImageService {
         shareImage.setSharePath(sharePath);
         imageMapper.shareImg(shareImage);
         return sharePath;
+    }
+
+    @Override
+    public String likeImage(OptDto dto, HttpServletRequest request) throws IOException {
+        // 1. 基础参数校验
+        if (dto == null) {
+            throw new IllegalArgumentException(Constants.PARM_NOT_NULL);
+        }
+        String path = dto.getPath();
+        if (StringUtils.isEmpty(path)) {
+            throw new IllegalArgumentException(Constants.PATH_NOT_EMPTY);
+        }
+
+        // 2. 从token解析用户ID并校验
+        String userId = parseUidFromToken(request);
+        if (StringUtils.isEmpty(userId)) {
+            throw new RuntimeException(Constants.TOKEN_EXPIRE);
+        }
+
+        // 3. 解析图片ID（增加格式校验）
+        String[] str = path.split("_");
+        if (str.length < 2) {
+            log.error("点赞图片失败：path格式错误，path={}", path);
+            throw new IllegalArgumentException("图片路径格式错误，正确格式应为：图片ID_图片名称");
+        }
+        String imgID = str[0];
+        if (StringUtils.isEmpty(imgID)) {
+            log.error("点赞图片失败：解析出的图片ID为空，path={}", path);
+            throw new IllegalArgumentException("图片ID不能为空");
+        }
+
+        // 4. 防重复点赞校验
+        boolean isLiked = imageMapper.checkUserImgRelExists(imgID, userId) >= 1;
+        if (isLiked) {
+            return "已点赞图片无需重复操作";
+        }
+
+        // 5. 记录用户-图片点赞关系
+        try {
+            UserImgRel userImgRel = new UserImgRel(imgID, userId);
+            imageMapper.recordUserImgRel(userImgRel);
+            log.info("用户{}成功点赞图片{}", userId, imgID);
+        } catch (Exception e) {
+            throw new RuntimeException("点赞失败：记录点赞关系异常", e);
+        }
+
+        // 6. 查询图片拥有者ID
+        String ownerId = imageMapper.queryOwnerId(imgID);
+        // 7. 发送RocketMQ点赞通知
+        String time = sdf.format(new Date());
+        sendLikeNoticeMessage(new LikeNotice(imgID, str[1], userId, ownerId, time));
+        return "点赞成功";
+    }
+
+    private void sendLikeNoticeMessage(LikeNotice likeNotice) {
+        try {
+            // 构建消息内容（JSON格式更易解析，建议使用FastJSON/Jackson序列化）
+            String noticeContent = JSON.toJSONString(likeNotice);
+
+            // 创建RocketMQ消息
+            Message message = new Message(
+                    Constants.IMAGE_LIKE_NOTICE_TOPIC, // 主题
+                    "IMAGE_LIKE_TAG",  // 标签（便于消息过滤）
+                    noticeContent.getBytes(StandardCharsets.UTF_8)
+            );
+
+            // 发送消息
+            SendResult sendResult = rocketMQProducer.send(message);
+        } catch (Exception e) {
+            // 消息发送失败不影响核心业务（点赞已成功），仅记录日志，可根据业务需求选择是否重试
+            throw new RuntimeException("消息发送失败", e); // 如需强一致性可抛出异常
+        }
     }
 
     private boolean checkDirHasChildDir(String dirPath) {

@@ -74,6 +74,16 @@ public class ImageController {
         }
     }
 
+    @PostMapping("/likeImage")
+    public R<String> likeImage(@RequestBody OptDto dto, HttpServletRequest request) {
+        try {
+            String msg = imageService.likeImage(dto, request);
+            return R.ok(msg);
+        } catch (Exception e) {
+            return R.fail(e.getMessage());
+        }
+    }
+
     @PostMapping("/createDir")
     public R<String> createDir(@RequestBody DirDto dto) {
         try {

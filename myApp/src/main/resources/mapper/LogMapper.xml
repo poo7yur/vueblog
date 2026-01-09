@@ -7,9 +7,18 @@
         (#{log.module} ,#{log.description} ,#{log.ip} ,#{log.loginUser} ,#{log.uri} ,#{log.method} ,#{log.params} ,#{log.result} ,#{log.accessTime})
     </insert>
 
+    <insert id="addLog">
+        insert into t_msg(msg_id ,msg_content ,update_time ,state ,create_by ,group_id ,msg_type ,user_id) values (#{tMsg.msgId} ,#{tMsg.msgContent} ,#{tMsg.updateTime} ,#{tMsg.state} ,#{tMsg.createBy} ,#{tMsg.groupId} ,#{tMsg.msgType} ,#{tMsg.userId})
+    </insert>
+
     <select id="getMsg" resultType="com.example.myApp.demos.entity.MsgEntity">
-        select * from t_msg tm where group_id in
+        select tm.msg_id ,tm.msg_content ,tm.update_time ,tm.state ,tm.group_id ,tm.msg_type ,tu.name as createBy from t_msg tm inner join t_user tu on tm.create_by = tu.user_id
+        where tm.user_id = #{userId} and tm.group_id in
         <foreach collection="list" open="(" close=")" separator="," item="id">#{id}</foreach>
+        <if test='kw != null and kw != ""'>
+            and tm.msg_content like concat('%', #{kw, jdbcType=VARCHAR}, '%')
+        </if>
+        order by update_time desc
     </select>
 
     <select id="getMsgGroupIds" resultType="java.lang.String">

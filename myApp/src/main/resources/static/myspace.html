@@ -464,6 +464,8 @@
           this.classList.add("active"); // 标记当前节点为选中
           currentNode = node; // 更新当前节点
           currentPath = node.path; // 更新当前路径
+          
+          currentPage = 1;
           renderFolderView(node); // 刷新视图
         });
 
@@ -512,6 +514,7 @@
             card.addEventListener("click", function () {
               currentNode = child;
               currentPath = child.path;
+              currentPage = 1;
               renderFolderView(child);
               // 同步选中树形结构对应节点
               document.querySelectorAll(".tree-node").forEach((el) => {
@@ -867,6 +870,8 @@
         folderView.innerHTML = "<p>加载中...</p>";
         // 记录当前文件夹路径
         currentFolderPath = folderPath;
+        // 加载图片前先更新分页UI
+        updatePaginationUI();
         const postData = {
           path: folderPath,
           pageNo: currentPage,

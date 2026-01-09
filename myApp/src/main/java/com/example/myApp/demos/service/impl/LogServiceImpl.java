@@ -1,9 +1,12 @@
 package com.example.myApp.demos.service.impl;
 
 import com.example.myApp.demos.Constants;
+import com.example.myApp.demos.dto.PageDto;
 import com.example.myApp.demos.entity.MsgEntity;
 import com.example.myApp.demos.mapper.LogMapper;
 import com.example.myApp.demos.service.LogService;
+import com.github.pagehelper.PageHelper;
+import com.github.pagehelper.PageInfo;
 import org.springframework.stereotype.Service;
 
 import javax.annotation.Resource;
@@ -17,10 +20,19 @@ public class LogServiceImpl implements LogService {
     private LogMapper logMapper;
 
     @Override
-    public List<MsgEntity> getMsg(String userId) {
-        //根据用户id查询订阅的消息组id
+    public PageInfo<MsgEntity> getMsg(PageDto dto) {
+        String userId = dto.getUserId();
+        // 1. 查询订阅的消息组ID
         Set<String> groupIds = logMapper.getMsgGroupIds(userId);
-        if(groupIds.isEmpty()) throw new RuntimeException(Constants.MSG_NOT_SUBSCRIBE);
-        return logMapper.getMsg(groupIds);
+
+        // 2. 校验：如果没有订阅任何消息组，抛出异常
+        if (groupIds.isEmpty()) throw new RuntimeException(Constants.MSG_NOT_SUBSCRIBE);
+
+        // 3. 初始化分页参数（PageHelper会自动拦截后续的MyBatis查询并添加分页条件）
+        PageHelper.startPage(dto.getPageNum(), dto.getPageSize());
+
+        // 4. 核心：根据消息组ID集合分页查询消息列表
+        List<MsgEntity> msgList = logMapper.getMsg(groupIds, dto.getKeyword(), userId);
+        return new PageInfo<>(msgList);
     }
 }

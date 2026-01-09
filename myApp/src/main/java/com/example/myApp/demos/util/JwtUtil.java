@@ -6,9 +6,7 @@ import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
 
-import java.util.Date;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.*;
 
 public class JwtUtil {
     // 1. 核心配置：密钥（关键！0.11.5 要求密钥长度符合对应算法要求，HS256 要求至少 256 位（32 个字符））
