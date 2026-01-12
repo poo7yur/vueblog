@@ -7,6 +7,7 @@ import com.example.myApp.demos.dto.DirDto;
 import com.example.myApp.demos.dto.ImageDto;
 import com.example.myApp.demos.dto.LikeNotice;
 import com.example.myApp.demos.dto.OptDto;
+import com.example.myApp.demos.entity.CommentEntity;
 import com.example.myApp.demos.entity.ShareImage;
 import com.example.myApp.demos.entity.User;
 import com.example.myApp.demos.entity.UserImgRel;
@@ -56,7 +57,7 @@ public class ImageServiceImpl implements ImageService {
     @Resource
     private DefaultMQProducer rocketMQProducer;
 
-    private static final SimpleDateFormat sdf = new  SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+    private static final SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
 
     /**
      * 扫描指定路径下的目录结构并构建树形节点
@@ -326,6 +327,32 @@ public class ImageServiceImpl implements ImageService {
         String time = sdf.format(new Date());
         sendLikeNoticeMessage(new LikeNotice(imgID, str[1], userId, ownerId, time));
         return "点赞成功";
+    }
+
+    @Override
+    public String commentImage(OptDto dto, HttpServletRequest request) {
+        if (StringUtils.isEmpty(dto.getPath()) || StringUtils.isEmpty(dto.getRemark()))
+            throw new IllegalArgumentException(Constants.PARM_NOT_NULL);
+        //解析用户权限
+        String uid = parseUidFromToken(request);
+        if (StringUtils.isEmpty(uid)) throw new RuntimeException(Constants.TOKEN_EXPIRE);
+        String imgID = dto.getPath().split("_")[0];
+        if (StringUtils.isEmpty(imgID)) throw new RuntimeException("图片ID不能为空");
+        String date = sdf.format(new Date());
+        String id = RandomUtil.randomString(18);
+        CommentEntity comment = new CommentEntity(id, dto.getRemark(), uid, date, 0, imgID);
+        imageMapper.insertComment(comment);  //存下用户对当前图片的评论
+        return id;
+    }
+
+    @Override
+    public List<CommentEntity> getComment(String id) {
+        List<CommentEntity> comments;
+        //根据图片id查询其评论
+        comments = imageMapper.queryComment(id);
+        if (comments.isEmpty()) {
+            throw new RuntimeException("该图片暂无评论");
+        } else return comments;
     }
 
     private void sendLikeNoticeMessage(LikeNotice likeNotice) {

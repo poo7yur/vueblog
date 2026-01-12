@@ -16,7 +16,7 @@ import javax.annotation.Resource;
 @Component
 @RocketMQMessageListener(
         topic = Constants.IMAGE_LIKE_NOTICE_TOPIC,  // 与生产者的主题一致
-        consumerGroup = "IMAGE_LIKE_CONSUMER_GROUP",  // 消费者组（自定义，需唯一）
+        consumerGroup = Constants.IMAGE_LIKE_CONSUMER_GROUP,  // 消费者组（自定义，需唯一）
         selectorExpression = "IMAGE_LIKE_TAG"  // 消息标签（与生产者一致，空则消费所有标签）
 )
 @Slf4j
@@ -42,7 +42,7 @@ public class LikeNoticeConsumer implements RocketMQListener<LikeNotice> {
             msgEntity.setMsgContent("图片：" + likeNotice.getImgName() + " 被点赞了");
             msgEntity.setMsgType(0);
             msgEntity.setUpdateTime(likeNotice.getLikeTime());
-            msgEntity.setGroupId("IMAGE_LIKE_CONSUMER_GROUP");
+            msgEntity.setGroupId(Constants.IMAGE_LIKE_CONSUMER_GROUP);
             msgEntity.setMsgType(0);
             msgEntity.setUserId(likeNotice.getOwnerId());
             msgEntity.setCreateBy(likerId);

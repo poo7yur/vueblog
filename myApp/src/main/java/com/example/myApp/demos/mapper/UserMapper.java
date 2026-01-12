@@ -15,4 +15,6 @@ public interface UserMapper {
 
     Set<String> queryNames();
 
+    void subscribeMsg(String uid, String topic);
+
 }

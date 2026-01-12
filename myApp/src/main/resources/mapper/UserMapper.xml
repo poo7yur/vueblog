@@ -6,6 +6,10 @@
         insert into t_user(user_id ,name ,password ,email ,salt ,phone ,create_time) values (#{user.userId} ,#{user.name} ,#{user.password} ,#{user.email} ,#{user.salt} ,#{user.phone} ,now())
     </insert>
 
+    <insert id="subscribeMsg">
+        insert into t_user_group (user_id ,group_id) values (#{param1} ,#{param2})
+    </insert>
+
     <select id="findUser" resultType="com.example.myApp.demos.entity.User">
         select * from t_user where name =#{name} and status =0
     </select>

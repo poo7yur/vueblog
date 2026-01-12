@@ -6,6 +6,13 @@ let currentQuery = {
   pageSize: 10,
 };
 
+// 新增：当前评论图片信息
+let currentCommentImg = {
+  src: "",
+  fileName: "",
+  imgId: ""
+};
+
 // 页面加载完成后执行
 document.addEventListener("DOMContentLoaded", function () {
   fetchData();
@@ -130,7 +137,7 @@ function loadFolder(folderPath) {
   fetch("/listImages", {
     method: "POST",
     headers: {
-      "Content-Type": "application/json",
+      "Content-Type": "application/json; charset=utf-8",
     },
     body: JSON.stringify(postData),
   })
@@ -214,7 +221,7 @@ async function handleLike(event, imgSrc, fileName) {
     const response = await fetch("/likeImage", {
       method: "POST",
       headers: {
-        "Content-Type": "application/json",
+        "Content-Type": "application/json; charset=utf-8",
         token: localStorage.getItem("token"),
       },
       body: JSON.stringify({ path: fileName }),
@@ -236,33 +243,138 @@ async function handleLike(event, imgSrc, fileName) {
 }
 
 function openImage(src) {
-  // 创建遮罩层
+  // 创建遮罩层（重命名为image-modal）
   const modal = document.createElement("div");
-  modal.style.position = "fixed";
-  modal.style.top = "0";
-  modal.style.left = "0";
-  modal.style.width = "100%";
-  modal.style.height = "100%";
-  modal.style.backgroundColor = "rgba(0, 0, 0, 0.9)"; // 深色背景
-  modal.style.zIndex = "1000";
-  modal.style.display = "flex";
-  modal.style.justifyContent = "center";
-  modal.style.alignItems = "center";
-  modal.style.cursor = "pointer";
+  modal.className = "image-modal";
 
-  // 创建大图
-  const img = document.createElement("img");
-  img.src = src;
-  img.style.maxWidth = "90vw"; // 最大宽度为视口的 90%
-  img.style.maxHeight = "90vh"; // 最大高度为视口的 90%
-  img.style.border = "3px solid #fff";
-  img.style.boxShadow = "0 4px 20px rgba(255,255,255,0.1)";
+  // 判断是否为share目录图片（决定是否显示评论区）
+  const isShareImg = src.includes("share");
+  const token = localStorage.getItem("userToken");
+  const fileName = src.substring(src.lastIndexOf("/") + 1);
+  const imgId = fileName.split("_")[0];
+  currentCommentImg = {
+    src: src,
+    fileName: fileName,
+    imgId: imgId
+  };
+
+  // 构建大图+评论区DOM
+  modal.innerHTML = `
+    <div class="image-modal-left">
+      <img src="${src}" class="image-modal-img">
+    </div>
+    <div class="image-modal-right" id="commentPanel">
+      <div class="comment-panel-header">评论区</div>
+      <div class="comment-panel-list" id="commentList"></div>
+      <div class="comment-panel-input-area">
+        <input type="text" class="comment-panel-input" id="commentInput" placeholder="输入你的评论...">
+        <button class="comment-panel-submit" id="commentSubmit">提交</button>
+      </div>
+    </div>
+  `;
 
   // 点击遮罩层关闭
-  modal.onclick = () => document.body.removeChild(modal);
+  modal.onclick = (e) => {
+    if (e.target === modal) {
+      document.body.removeChild(modal);
+    }
+  };
 
-  modal.appendChild(img);
   document.body.appendChild(modal);
+
+  // 仅share目录+已登录显示评论区并加载评论
+  if (isShareImg && token) {
+    const commentPanel = document.getElementById("commentPanel");
+    commentPanel.style.display = "flex";
+    // 加载评论列表
+    loadComments(imgId);
+    // 绑定提交评论事件
+    document.getElementById("commentSubmit").addEventListener("click", submitComment);
+  }
+}
+
+// 加载评论列表
+async function loadComments(imgId) {
+  const commentListEl = document.getElementById("commentList");
+  commentListEl.innerHTML = '<div class="comment-loading">加载中...</div>';
+
+  try {
+    const response = await fetch(`/getComment/${imgId}`);
+    const result = await response.json();
+
+    if (result.code !== 0) {
+      commentListEl.innerHTML = `<div class="comment-empty">加载失败：${result.msg}</div>`;
+      return;
+    }
+
+    const comments = result.data;
+    if (comments.length === 0) {
+      commentListEl.innerHTML = '<div class="comment-empty">暂无评论，快来抢沙发～</div>';
+      return;
+    }
+
+    // 渲染评论列表
+    let commentHtml = "";
+    comments.forEach(comment => {
+      commentHtml += `
+        <div class="comment-panel-item">
+          <div class="comment-panel-author">${comment.commentBy}</div>
+          <div class="comment-panel-content">${comment.content}</div>
+        </div>
+      `;
+    });
+    commentListEl.innerHTML = commentHtml;
+  } catch (error) {
+    console.error("加载评论失败：", error);
+    commentListEl.innerHTML = '<div class="comment-empty">加载评论失败，请重试</div>';
+  }
+}
+
+// 提交评论
+async function submitComment() {
+  const commentInput = document.getElementById("commentInput");
+  const remark = commentInput.value.trim();
+
+  // 校验输入
+  if (!remark) {
+    alert("请输入评论内容！");
+    return;
+  }
+
+  // 校验登录状态（兜底）
+  const token = localStorage.getItem("userToken");
+  if (!token) {
+    alert("请先登录后再评论！");
+    document.querySelector(".image-modal").remove();
+    document.getElementById("loginModalMask").style.display = "flex";
+    return;
+  }
+
+  try {
+    const response = await fetch("/commentImage", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json; charset=utf-8"
+        // token已通过全局fetch拦截器自动添加，无需手动传
+      },
+      body: JSON.stringify({
+        path: currentCommentImg.fileName,
+        remark: remark
+      })
+    });
+
+    const result = await response.json();
+    if (result.code === 0) {
+      alert("评论成功！");
+      commentInput.value = ""; // 清空输入框
+      await loadComments(currentCommentImg.imgId); // 刷新评论列表
+    } else {
+      alert(`评论失败：${result.msg}`);
+    }
+  } catch (error) {
+    console.error("提交评论失败：", error);
+    alert("提交评论失败，请检查网络或接口是否正常！");
+  }
 }
 
 // 获取DOM元素
@@ -327,7 +439,7 @@ loginBtn.addEventListener("click", async () => {
     const response = await fetch("/login", {
       method: "POST",
       headers: {
-        "Content-Type": "application/json", // 与postman一致
+        "Content-Type": "application/json; charset=utf-8",
       },
       body: JSON.stringify({
         // 构造请求体，与后端参数对应
@@ -416,7 +528,7 @@ document.getElementById("registerBtn").addEventListener("click", function () {
   fetch("/addUser", {
     method: "POST",
     headers: {
-      "Content-Type": "application/json",
+      "Content-Type": "application/json; charset=utf-8",
     },
     body: JSON.stringify({
       name: username,
@@ -495,7 +607,7 @@ function fetchMessages() {
     method: "POST",
     headers: {
       userId: localStorage.getItem("currentUserId"),
-      "Content-Type": "application/json",
+      "Content-Type": "application/json; charset=utf-8",
     },
     body: JSON.stringify({
       keyword: currentQuery.keyword,

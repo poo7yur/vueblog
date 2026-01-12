@@ -6,6 +6,10 @@
         insert into share_image(id ,source_path ,flg ,owner_id ,update_time ,remark ,share_path) values (#{si.id} ,#{si.sourcePath} ,#{si.flg} ,#{si.ownerId} ,#{si.updateTime} ,#{si.remark} ,#{si.sharePath})
     </insert>
 
+    <insert id="insertComment">
+        insert into t_comment(id ,comment_by ,img_id ,content ,comment_time ,flg) values (#{c.id} ,#{c.commentBy} ,#{c.imgId} ,#{c.content} ,#{c.commentTime} ,#{c.flg})
+    </insert>
+
     <select id="recordUserImgRel">
         insert into user_img_rel(user_id ,img_id) values(#{t.userId} ,#{t.imgId})
     </select>
@@ -16,5 +20,11 @@
 
     <select id="checkUserImgRelExists" resultType="java.lang.Integer">
         select count(1) from user_img_rel where user_id = #{uid} and img_id = #{id}
+    </select>
+
+    <select id="queryComment" resultType="com.example.myApp.demos.entity.CommentEntity">
+        select tm.id, tm.comment_by, tm.img_id, tm.comment_time, tm.content ,tu.name as commentBy from t_comment tm
+        inner join t_user tu on tm.comment_by = tu.user_id
+        where tm.img_id = #{param1} and flg =0 order by comment_time desc limit 99
     </select>
 </mapper>

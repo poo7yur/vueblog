@@ -77,8 +77,8 @@ header {
 }
 
 .image-item {
-  position: relative
-  display: inline-block
+  position: relative;
+  display: inline-block;
 }
 
 .image-grid img {
@@ -383,3 +383,127 @@ header {
 #msgTable th {
     background-color: #f2f2f2;
 }
+
+/* 大图预览弹窗样式重构 */
+.image-modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.9);
+  z-index: 1000;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 20px;
+}
+
+/* 大图容器 */
+.image-modal-left {
+  flex: 1;
+  height: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding-right: 20px;
+}
+
+.image-modal-img {
+  max-width: 100%;
+  max-height: 90vh;
+  border: 3px solid #fff;
+  box-shadow: 0 4px 20px rgba(255,255,255,0.1);
+}
+
+/* 评论面板（仅share目录图片显示） */
+.image-modal-right {
+  width: 380px;
+  height: 90vh;
+  background-color: #fff;
+  border-radius: 8px;
+  padding: 20px;
+  display: none; /* 默认隐藏，share图片才显示 */
+  flex-direction: column;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.2);
+}
+
+/* 评论面板标题 */
+.comment-panel-header {
+  font-size: 18px;
+  font-weight: bold;
+  margin-bottom: 15px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid #eee;
+}
+
+/* 评论列表 */
+.comment-panel-list {
+  flex: 1;
+  overflow-y: auto;
+  margin-bottom: 15px;
+}
+
+.comment-panel-item {
+  padding: 10px 0;
+  border-bottom: 1px solid #f5f5f5;
+}
+
+.comment-panel-author {
+  font-weight: bold;
+  color: #333;
+  margin-bottom: 5px;
+}
+
+.comment-panel-content {
+  color: #666;
+  line-height: 1.4;
+}
+
+/* 评论输入区域 */
+.comment-panel-input-area {
+  display: flex;
+  gap: 10px;
+}
+
+.comment-panel-input {
+  flex: 1;
+  padding: 10px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  outline: none;
+  font-size: 14px;
+}
+
+.comment-panel-input:focus {
+  border-color: #6495ed;
+}
+
+.comment-panel-submit {
+  padding: 0 20px;
+  background-color: #6495ed;
+  color: #fff;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.comment-panel-submit:hover {
+  background-color: #4169e1;
+}
+
+/* 空评论提示 */
+.comment-empty {
+  text-align: center;
+  color: #999;
+  padding: 20px 0;
+}
+
+/* 加载中提示 */
+.comment-loading {
+  text-align: center;
+  color: #666;
+  padding: 20px 0;
+}
+

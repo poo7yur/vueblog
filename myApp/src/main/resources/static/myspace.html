@@ -405,7 +405,7 @@
             method: "GET",
             headers: {
               token: userToken, // 携带token请求头
-              "Content-Type": "application/json",
+              "Content-Type": "application/json; charset=utf-8",
             },
           });
           const result = await res.json();
@@ -610,7 +610,7 @@
             method: "POST",
             headers: {
               token: userToken,
-              "Content-Type": "application/json",
+              "Content-Type": "application/json; charset=utf-8",
             },
             body: JSON.stringify({ path: imagePath }),
           });
@@ -654,7 +654,7 @@
             method: "POST",
             headers: {
               token: userToken,
-              "Content-Type": "application/json",
+              "Content-Type": "application/json; charset=utf-8",
             },
             body: JSON.stringify(requestData),
           });
@@ -768,7 +768,7 @@
           const res = await fetch(`/createDir`, {
             method: "POST",
             headers: {
-              "Content-Type": "application/json",
+              "Content-Type": "application/json; charset=utf-8",
               token: localStorage.getItem("userToken"),
             },
             body: JSON.stringify(postData),
@@ -795,7 +795,7 @@
           const res = await fetch(`/deleteDir`, {
             method: "POST",
             headers: {
-              "Content-Type": "application/json",
+              "Content-Type": "application/json; charset=utf-8",
               token: localStorage.getItem("userToken"),
             },
             body: JSON.stringify(postData),
@@ -821,7 +821,7 @@
             method: "GET",
             headers: {
               token: localStorage.getItem("userToken"),
-              "Content-Type": "application/json",
+              "Content-Type": "application/json; charset=utf-8",
             },
           });
           const result = await res.json();
@@ -881,7 +881,7 @@
         fetch("/listImages", {
           method: "POST",
           headers: {
-            "Content-Type": "application/json",
+            "Content-Type": "application/json; charset=utf-8",
           },
           body: JSON.stringify(postData),
         })

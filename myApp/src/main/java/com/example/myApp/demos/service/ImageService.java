@@ -3,6 +3,7 @@ package com.example.myApp.demos.service;
 import com.example.myApp.demos.dto.DirDto;
 import com.example.myApp.demos.dto.ImageDto;
 import com.example.myApp.demos.dto.OptDto;
+import com.example.myApp.demos.entity.CommentEntity;
 import com.example.myApp.demos.util.DirUtil;
 import com.example.myApp.demos.vo.PageImageVo;
 import org.springframework.web.multipart.MultipartFile;
@@ -27,5 +28,9 @@ public interface ImageService {
     String shareImage(OptDto dto ,HttpServletRequest request) throws IOException;
 
     String likeImage(OptDto dto, HttpServletRequest request) throws IOException;
+
+    String commentImage(OptDto dto, HttpServletRequest request);
+
+    List<CommentEntity> getComment(String id);
 
 }

@@ -5,6 +5,7 @@ import com.example.myApp.demos.aop.AccessLog;
 import com.example.myApp.demos.dto.DirDto;
 import com.example.myApp.demos.dto.ImageDto;
 import com.example.myApp.demos.dto.OptDto;
+import com.example.myApp.demos.entity.CommentEntity;
 import com.example.myApp.demos.entity.R;
 import com.example.myApp.demos.service.ImageService;
 import com.example.myApp.demos.util.DirUtil;
@@ -65,6 +66,7 @@ public class ImageController {
     }
 
     @PostMapping("/shareImage")
+    @AccessLog(module = "img manage", description = "share image")
     public R<String> shareImage(@RequestBody OptDto dto, HttpServletRequest request) {
         try {
             if (StringUtils.isEmpty(dto.getPath())) throw new IllegalArgumentException(Constants.PATH_NOT_EMPTY);
@@ -79,6 +81,26 @@ public class ImageController {
         try {
             String msg = imageService.likeImage(dto, request);
             return R.ok(msg);
+        } catch (Exception e) {
+            return R.fail(e.getMessage());
+        }
+    }
+
+    @PostMapping("/commentImage")
+    public R<String> commentImage(@RequestBody OptDto dto, HttpServletRequest request) {
+        try {
+            String msg = imageService.commentImage(dto, request);
+            return R.ok(msg);
+        } catch (Exception e) {
+            return R.fail(e.getMessage());
+        }
+    }
+
+    @GetMapping("/getComment/{id}")
+    public R<List<CommentEntity>> getComment(@PathVariable("id") String id) {
+        try {
+            List<CommentEntity> list = imageService.getComment(id);
+            return R.ok(list);
         } catch (Exception e) {
             return R.fail(e.getMessage());
         }

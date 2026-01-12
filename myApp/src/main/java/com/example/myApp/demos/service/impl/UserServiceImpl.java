@@ -16,6 +16,7 @@ import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import javax.annotation.Resource;
 import java.io.IOException;
@@ -38,6 +39,7 @@ public class UserServiceImpl implements UserService {
     private String fileDir;
 
     @Override
+    @Transactional(rollbackFor = Exception.class)
     public String addUsr(RegisterDto dto) throws IOException {
         String name = dto.getName();
         if (StringUtils.isEmpty(dto.getPassword()) || StringUtils.isEmpty(name))
@@ -55,6 +57,7 @@ public class UserServiceImpl implements UserService {
         user.setPassword(newPwd);
         user.setUserId(uid);
         userMapper.addUser(user);
+        userMapper.subscribeMsg(uid ,Constants.IMAGE_LIKE_CONSUMER_GROUP);//订阅以消费点赞通知
         //创建一个文件夹分配给当前用户
         String newFolderPath = fileDir + name;
         Path dir = Paths.get(newFolderPath);

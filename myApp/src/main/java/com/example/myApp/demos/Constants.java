@@ -20,11 +20,14 @@ public class Constants {
 
     public static final String PATH_NOT_EMPTY = "路径不能为空";
 
-    public static final String NOT_ALLOWED = "目标存在子目录!不允许放图片";
+    public static final String NOT_ALLOWED = "目标存在子目录时不允许放图片";
 
     public static final String FILE_NOT_FOUND = "未找到文件!";
 
     public static final String ACCESS_LOG_TOPIC = "access-log-topic";
 
     public static final String IMAGE_LIKE_NOTICE_TOPIC = "image-like-notice-topic";
+
+    public static final String IMAGE_LIKE_CONSUMER_GROUP = "IMAGE_LIKE_CONSUMER_GROUP";
+
 }
