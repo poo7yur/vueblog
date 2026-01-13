@@ -12,5 +12,5 @@ public class MsgEntity {
     private String createBy;//消息创建人
     private String groupId;//分组
     private String userId;//消息接收人
-    private int msgType;
+    private String msgType;//0 点赞 1评论
 }

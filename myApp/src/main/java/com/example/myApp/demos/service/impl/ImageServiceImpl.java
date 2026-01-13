@@ -3,10 +3,7 @@ package com.example.myApp.demos.service.impl;
 import cn.hutool.core.util.RandomUtil;
 import com.alibaba.fastjson.JSON;
 import com.example.myApp.demos.Constants;
-import com.example.myApp.demos.dto.DirDto;
-import com.example.myApp.demos.dto.ImageDto;
-import com.example.myApp.demos.dto.LikeNotice;
-import com.example.myApp.demos.dto.OptDto;
+import com.example.myApp.demos.dto.*;
 import com.example.myApp.demos.entity.CommentEntity;
 import com.example.myApp.demos.entity.ShareImage;
 import com.example.myApp.demos.entity.User;
@@ -114,12 +111,7 @@ public class ImageServiceImpl implements ImageService {
         Path userSpace = Paths.get(fileDir, userName);
 
         // 4.1 计算用户已使用空间（MB）
-        long usedMb = Files.exists(userSpace)
-                ? Files.walk(userSpace)
-                .filter(Files::isRegularFile)
-                .mapToLong(p -> p.toFile().length())
-                .sum() / div
-                : 0;
+        long usedMb = Files.exists(userSpace) ? Files.walk(userSpace).filter(Files::isRegularFile).mapToLong(p -> p.toFile().length()).sum() / div : 0;
 
         // 4.2 获取用户空间额度
         User user = userMapper.findUser(userName);
@@ -219,15 +211,13 @@ public class ImageServiceImpl implements ImageService {
             throw new RuntimeException(Constants.ILLEGAl_OPT);
         if (!Files.exists(target) || !Files.isDirectory(target))
             throw new FileNotFoundException("目录不存在：" + target);
-        Files.walk(target)
-                .sorted(Comparator.reverseOrder())
-                .forEach(p -> {
-                    try {
-                        Files.deleteIfExists(p);
-                    } catch (IOException e) {
-                        throw new RuntimeException("删除失败：" + p, e);
-                    }
-                });
+        Files.walk(target).sorted(Comparator.reverseOrder()).forEach(p -> {
+            try {
+                Files.deleteIfExists(p);
+            } catch (IOException e) {
+                throw new RuntimeException("删除失败：" + p, e);
+            }
+        });
     }
 
     @Override
@@ -330,22 +320,6 @@ public class ImageServiceImpl implements ImageService {
     }
 
     @Override
-    public String commentImage(OptDto dto, HttpServletRequest request) {
-        if (StringUtils.isEmpty(dto.getPath()) || StringUtils.isEmpty(dto.getRemark()))
-            throw new IllegalArgumentException(Constants.PARM_NOT_NULL);
-        //解析用户权限
-        String uid = parseUidFromToken(request);
-        if (StringUtils.isEmpty(uid)) throw new RuntimeException(Constants.TOKEN_EXPIRE);
-        String imgID = dto.getPath().split("_")[0];
-        if (StringUtils.isEmpty(imgID)) throw new RuntimeException("图片ID不能为空");
-        String date = sdf.format(new Date());
-        String id = RandomUtil.randomString(18);
-        CommentEntity comment = new CommentEntity(id, dto.getRemark(), uid, date, 0, imgID);
-        imageMapper.insertComment(comment);  //存下用户对当前图片的评论
-        return id;
-    }
-
-    @Override
     public List<CommentEntity> getComment(String id) {
         List<CommentEntity> comments;
         //根据图片id查询其评论
@@ -355,23 +329,58 @@ public class ImageServiceImpl implements ImageService {
         } else return comments;
     }
 
+    @Override
+    public String commentImage(OptDto dto, HttpServletRequest request) {
+        String remark = dto.getRemark();
+        if (StringUtils.isEmpty(dto.getPath()) || StringUtils.isEmpty(remark))
+            throw new IllegalArgumentException(Constants.PARM_NOT_NULL);
+        //解析用户权限
+        String uid = parseUidFromToken(request);
+        if (StringUtils.isEmpty(uid)) throw new RuntimeException(Constants.TOKEN_EXPIRE);
+        String imgID = dto.getPath().split("_")[0];
+        if (StringUtils.isEmpty(imgID)) throw new RuntimeException("图片ID不能为空");
+        String date = sdf.format(new Date());
+        String id = RandomUtil.randomString(18);
+        CommentEntity comment = new CommentEntity(id, remark, uid, date, 0, imgID);
+        imageMapper.insertComment(comment);  //存下用户对当前图片的评论
+        //RocketMQ 发送评论通知
+        String ownerId = imageMapper.queryOwnerId(imgID);
+        sendCommentNoticeMessage(new CommentNotice(id, ownerId, remark, uid, imgID, date));
+        return id;
+    }
+
+    private void sendCommentNoticeMessage(CommentNotice commentNotice) {
+        try {
+            //json格式化
+            String cid = commentNotice.getCommentId();
+            String commentJsonStr = JSON.toJSONString(commentNotice);
+            Message message = new Message(Constants.COMMENT_NOTICE_TOPIC,//主题
+                    "COMMENT_NOTICE_TAG", commentJsonStr.getBytes(StandardCharsets.UTF_8));
+
+            rocketMQProducer.send(message);
+            log.info("评论消息发送成功,msgId={}", cid);
+        } catch (Exception e) {
+            log.error("评论消息发送失败,原因{}", e.getMessage());
+            // 如需强一致性可抛出异常
+            throw new RuntimeException(e);
+        }
+    }
+
     private void sendLikeNoticeMessage(LikeNotice likeNotice) {
         try {
-            // 构建消息内容（JSON格式更易解析，建议使用FastJSON/Jackson序列化）
+            // 构建消息内容
             String noticeContent = JSON.toJSONString(likeNotice);
 
             // 创建RocketMQ消息
-            Message message = new Message(
-                    Constants.IMAGE_LIKE_NOTICE_TOPIC, // 主题
+            Message message = new Message(Constants.IMAGE_LIKE_NOTICE_TOPIC, // 主题
                     "IMAGE_LIKE_TAG",  // 标签（便于消息过滤）
-                    noticeContent.getBytes(StandardCharsets.UTF_8)
-            );
+                    noticeContent.getBytes(StandardCharsets.UTF_8));
 
             // 发送消息
             SendResult sendResult = rocketMQProducer.send(message);
         } catch (Exception e) {
             // 消息发送失败不影响核心业务（点赞已成功），仅记录日志，可根据业务需求选择是否重试
-            throw new RuntimeException("消息发送失败", e); // 如需强一致性可抛出异常
+            throw new RuntimeException("点赞消息发送失败", e);
         }
     }
 
@@ -388,7 +397,7 @@ public class ImageServiceImpl implements ImageService {
         } catch (IOException e) {
             return false;
         }
-        return false; // 没有子目录
+        return false;
     }
 
     private Path parseRealPath(String staticPath) {

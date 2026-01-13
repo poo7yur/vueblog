@@ -1,10 +1,14 @@
 package com.example.myApp.demos.entity;
 
+import lombok.AllArgsConstructor;
 import lombok.Data;
+import lombok.NoArgsConstructor;
 
 import java.util.Date;
 
 @Data
+@AllArgsConstructor
+@NoArgsConstructor
 public class User {
 
     private String userId;
@@ -17,4 +21,10 @@ public class User {
     private String role;
     private int status;
     private double defaultMb;
+
+    public User(String userId ,String name){
+        this.userId = userId;
+        this.name = name;
+    }
+
 }

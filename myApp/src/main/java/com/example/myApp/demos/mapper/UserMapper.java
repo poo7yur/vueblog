@@ -1,9 +1,11 @@
 package com.example.myApp.demos.mapper;
 
+import com.example.myApp.demos.dto.UserGroup;
 import com.example.myApp.demos.entity.User;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 
+import java.util.List;
 import java.util.Set;
 
 @Mapper
@@ -15,6 +17,6 @@ public interface UserMapper {
 
     Set<String> queryNames();
 
-    void subscribeMsg(String uid, String topic);
+    void subscribeMsg(@Param("list") List<UserGroup> list);
 
 }

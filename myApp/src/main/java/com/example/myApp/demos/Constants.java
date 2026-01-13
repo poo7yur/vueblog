@@ -20,6 +20,10 @@ public class Constants {
 
     public static final String PATH_NOT_EMPTY = "路径不能为空";
 
+    public static final String TOKEN_EXPIRED = "token已过期";
+
+    public static final String INVALID_TOKEN = "无效的token";
+
     public static final String NOT_ALLOWED = "目标存在子目录时不允许放图片";
 
     public static final String FILE_NOT_FOUND = "未找到文件!";
@@ -29,5 +33,9 @@ public class Constants {
     public static final String IMAGE_LIKE_NOTICE_TOPIC = "image-like-notice-topic";
 
     public static final String IMAGE_LIKE_CONSUMER_GROUP = "IMAGE_LIKE_CONSUMER_GROUP";
+
+    public static final String COMMENT_NOTICE_TOPIC = "comment-notice-topic";
+
+    public static final String COMMENT_CONSUMER_GROUP = "COMMENT_CONSUMER_GROUP";
 
 }

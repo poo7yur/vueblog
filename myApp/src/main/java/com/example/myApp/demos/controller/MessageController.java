@@ -49,8 +49,8 @@ public class MessageController {
 
     @PostMapping("/getMsg")
     public R<PageInfo<MsgEntity>> getMsg(HttpServletRequest request, @RequestBody PageDto dto) {
-        dto.setUserId(request.getHeader("userId"));
         try {
+            dto.setUserId(request.getHeader("userId"));
             return R.ok(logService.getMsg(dto));
         } catch (Exception e) {
             return R.fail(e.getMessage());

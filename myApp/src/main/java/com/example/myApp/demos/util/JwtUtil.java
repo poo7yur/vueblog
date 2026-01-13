@@ -10,7 +10,7 @@ import java.util.*;
 
 public class JwtUtil {
     // 1. 核心配置：密钥（关键！0.11.5 要求密钥长度符合对应算法要求，HS256 要求至少 256 位（32 个字符））
-    private static final String SECRET_KEY_STR = "myJwtSecretKey_2026_32chars_length_1234";
+    private static final String SECRET_KEY_STR = "myAppSecretKey_2026_32chars_length_1234";
     // 转换为 jjwt 要求的 SecretKey 类型（推荐使用 Keys 工具类生成，避免密钥格式错误）
     private static final SecretKey SECRET_KEY = Keys.hmacShaKeyFor(SECRET_KEY_STR.getBytes());
     // 2. Token 过期时间配置（示例：2 小时，单位：毫秒）

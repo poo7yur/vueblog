@@ -7,7 +7,10 @@
     </insert>
 
     <insert id="subscribeMsg">
-        insert into t_user_group (user_id ,group_id) values (#{param1} ,#{param2})
+        insert into t_user_group (user_id ,group_id) values
+        <foreach collection="list" item="t" separator="," index="index">
+            (#{t.userId}, #{t.groupId})
+        </foreach>
     </insert>
 
     <select id="findUser" resultType="com.example.myApp.demos.entity.User">

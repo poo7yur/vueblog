@@ -40,19 +40,18 @@ public class LikeNoticeConsumer implements RocketMQListener<LikeNotice> {
             MsgEntity msgEntity = new MsgEntity();
             msgEntity.setMsgId(imgID + RandomUtil.randomNumbers(10));
             msgEntity.setMsgContent("图片：" + likeNotice.getImgName() + " 被点赞了");
-            msgEntity.setMsgType(0);
             msgEntity.setUpdateTime(likeNotice.getLikeTime());
             msgEntity.setGroupId(Constants.IMAGE_LIKE_CONSUMER_GROUP);
-            msgEntity.setMsgType(0);
+            msgEntity.setMsgType("0");
             msgEntity.setUserId(likeNotice.getOwnerId());
             msgEntity.setCreateBy(likerId);
             logMapper.addLog(msgEntity);
             log.info("点赞通知消息处理成功：imgID={}, likerId={}", imgID, likerId);
         } catch (Exception e) {
             //异常处理：记录详细日志，便于排查问题
-            log.error("消费点赞通知消息失败：入库UserImgRel表异常，imgID={}, likerId={}", imgID, likerId, e);
+            log.error("消费点赞通知消息失败：imgID={}, likerId={}", imgID, likerId, e);
             // 可选：如果需要重试，可以抛出异常（RocketMQ会根据重试策略重试）
-            throw new RuntimeException("点赞关系入库失败", e);
+            throw new RuntimeException("点赞通知入库失败", e);
         }
     }
 }

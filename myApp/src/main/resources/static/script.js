@@ -466,9 +466,9 @@ loginBtn.addEventListener("click", async () => {
     localStorage.setItem("userToken", token);
     localStorage.setItem("currentUser", username);
     localStorage.setItem("currentUserId", userId);
-    // 方式2：sessionStorage - 会话级存储（关闭浏览器/标签页后消失，更安全）
-    // sessionStorage.setItem('userToken', token);
 
+    // 启动token刷新监控
+    startTokenRefreshMonitor();
     //alert("登录成功！Token已存储");
     loginModalMask.style.display = "none"; // 关闭弹窗
     // 关键：登录成功后调用视图更新函数
@@ -650,7 +650,6 @@ function renderMessages(messages) {
             <td>${msg.msgId}</td>
             <td>${msg.msgContent}</td>
             <td>${msg.updateTime}</td>
-            <td>${msg.state}</td>
             <td>${msg.createBy}</td>
             <td>${msg.groupId}</td>
             <td>${msg.msgType}</td>
@@ -786,3 +785,91 @@ spaceLink.addEventListener("click", async function (e) {
   // 已登录直接跳转到myspace.html，不再携带接口数据
   window.open("myspace.html", "_blank"); // 新开标签页跳转
 });
+
+/**
+ * 解析JWT令牌，获取payload中的过期时间
+ * @param {string} token - 本地存储的JWT令牌
+ * @returns {number} 过期时间戳（毫秒），解析失败返回0
+ */
+const getTokenExpireTime = (token) => {
+  if (!token) return 0;
+  try {
+    // 分割JWT，获取payload部分（注意解码前需处理Base64URL编码）
+    const payloadBase64 = token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/');
+    // Base64解码（浏览器环境使用atob，Node环境需用Buffer）
+    const payloadJson = decodeURIComponent(escape(window.atob(payloadBase64)));
+    const payload = JSON.parse(payloadJson);
+    // exp是秒级时间戳，转换为毫秒级（方便与Date.now()对比）
+    return payload.exp * 1000;
+  } catch (error) {
+    console.error('JWT解析失败：', error);
+    return 0;
+  }
+};
+
+/**
+ * @param {number} advanceTime - 提前刷新时间（默认5分钟，单位毫秒）
+ */
+const startTokenRefreshMonitor = (advanceTime = 5 * 60 * 1000) => {
+  // 清除已有定时任务（避免重复创建）
+  if (window.tokenRefreshTimer) clearInterval(window.tokenRefreshTimer);
+
+  const refreshToken = async () => {
+    const currentToken = localStorage.getItem('userToken');
+    if (!currentToken) {
+      clearInterval(window.tokenRefreshTimer);
+      return;
+    }
+
+    const expireTime = getTokenExpireTime(currentToken);
+    const now = Date.now();
+    const remainingTime = expireTime - now;
+
+    // 剩余时间小于提前刷新时间，且大于0（未过期），则刷新token
+    if (remainingTime > 0 && remainingTime <= advanceTime) {
+      try {
+        // 调用后端刷新token接口（需后端提供refreshToken接口，可携带旧token或refresh_token）
+        const response = await fetch('/refreshToken', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          }
+        });
+
+        const result = await response.json();
+        if (result.code === 0 && result.data.newJwtToken) {
+          // 更新localStorage中的token
+          localStorage.setItem('userToken', result.data.newJwtToken);
+        } else {
+          // 刷新失败（如旧token已无效），清除token并跳转登录页
+          handleTokenExpire();
+        }
+      } catch (error) {
+        console.error('token刷新失败：', error);
+        handleTokenExpire();
+      }
+    }
+
+    // 若token已过期，直接处理过期逻辑
+    if (remainingTime <= 0) {
+      clearInterval(window.tokenRefreshTimer);
+      handleTokenExpire();
+    }
+  };
+
+  // 初始化时先执行一次检查，之后每隔1分钟检查一次（可调整检查频率）
+  refreshToken();
+  window.tokenRefreshTimer = setInterval(refreshToken, 30 * 60 * 1000);
+};
+
+/**
+ * token过期统一处理
+ */
+const handleTokenExpire = () => {
+  // 1. 清除localStorage中的JWT令牌
+  localStorage.removeItem('userToken');
+  // 2. 提示用户token过期
+  alert('登录信息已过期，请重新登录');
+  // 3. 跳转至登录页（根据你的项目路由调整）
+  loginModalMask.style.display = "flex"; // 直接弹出登录框
+};

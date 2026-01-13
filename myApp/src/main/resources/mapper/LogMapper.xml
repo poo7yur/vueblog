@@ -12,7 +12,13 @@
     </insert>
 
     <select id="getMsg" resultType="com.example.myApp.demos.entity.MsgEntity">
-        select tm.msg_id ,tm.msg_content ,tm.update_time ,tm.state ,tm.group_id ,tm.msg_type ,tu.name as createBy from t_msg tm inner join t_user tu on tm.create_by = tu.user_id
+        select tm.msg_id ,tm.msg_content ,tm.update_time ,tm.state ,tm.group_id ,tu.name as createBy ,
+        CASE
+        WHEN tm.msg_type = '0' THEN '点赞'
+        WHEN tm.msg_type = '1' THEN '评论'
+        ELSE '未知'
+        END AS msg_type
+        from t_msg tm inner join t_user tu on tm.create_by = tu.user_id
         where tm.user_id = #{userId} and tm.group_id in
         <foreach collection="list" open="(" close=")" separator="," item="id">#{id}</foreach>
         <if test='kw != null and kw != ""'>

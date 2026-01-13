@@ -4,12 +4,15 @@ import cn.hutool.core.util.RandomUtil;
 import com.example.myApp.demos.Constants;
 import com.example.myApp.demos.dto.LoginDto;
 import com.example.myApp.demos.dto.RegisterDto;
+import com.example.myApp.demos.dto.TokenDto;
+import com.example.myApp.demos.dto.UserGroup;
 import com.example.myApp.demos.entity.User;
 import com.example.myApp.demos.mapper.UserMapper;
 import com.example.myApp.demos.service.UserService;
 import com.example.myApp.demos.util.JwtUtil;
 import com.example.myApp.demos.util.Md5Util;
 import com.example.myApp.demos.vo.UserVo;
+import io.jsonwebtoken.Claims;
 import org.apache.commons.lang3.ObjectUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.BeanUtils;
@@ -19,11 +22,13 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import javax.annotation.Resource;
-import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.Duration;
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.List;
 
 
 @Service
@@ -40,10 +45,14 @@ public class UserServiceImpl implements UserService {
 
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public String addUsr(RegisterDto dto) throws IOException {
+    public String addUsr(RegisterDto dto) throws Exception {
         String name = dto.getName();
         if (StringUtils.isEmpty(dto.getPassword()) || StringUtils.isEmpty(name))
             throw new RuntimeException(Constants.PWD_NAME_NOT_NULL);
+        //系统保留的特殊词不能当用户名
+        if ("share".equals(name) || "public".equals(name)) {
+            throw new RuntimeException(Constants.USED_NAME);
+        }
         //判断下名称是否被用掉
         User u = userMapper.findUser(name);
         if (!ObjectUtils.isEmpty(u)) throw new RuntimeException(Constants.USED_NAME);
@@ -57,12 +66,19 @@ public class UserServiceImpl implements UserService {
         user.setPassword(newPwd);
         user.setUserId(uid);
         userMapper.addUser(user);
-        userMapper.subscribeMsg(uid ,Constants.IMAGE_LIKE_CONSUMER_GROUP);//订阅以消费点赞通知
+        userMapper.subscribeMsg(setSubscribe(uid));//订阅消费
         //创建一个文件夹分配给当前用户
         String newFolderPath = fileDir + name;
         Path dir = Paths.get(newFolderPath);
         Files.createDirectories(dir);
         return uid;
+    }
+
+    private List<UserGroup> setSubscribe(String uid) {
+        List<UserGroup> list = new ArrayList<>();
+        list.add(new UserGroup(uid, Constants.IMAGE_LIKE_CONSUMER_GROUP));
+        list.add(new UserGroup(uid, Constants.COMMENT_CONSUMER_GROUP));
+        return list;
     }
 
     @Override
@@ -76,11 +92,36 @@ public class UserServiceImpl implements UserService {
         if (!hashPwd.equals(user.getPassword())) throw new RuntimeException(Constants.PWD_NAME_ERROR);
         //使用jwt生成token 存入redis并返回前端
         String token = JwtUtil.generateToken(user);
-        stringRedisTemplate.opsForValue().set(token, hashPwd, Duration.ofMinutes(30));
+        stringRedisTemplate.opsForValue().set(user.getUserId(), token, Duration.ofMinutes(120));
         UserVo userVo = new UserVo();
         userVo.setToken(token);
         BeanUtils.copyProperties(user, userVo);
         return userVo;
+    }
+
+    @Override
+    public TokenDto refreshToken(TokenDto dto) {
+        String currentToken = dto.getCurrentToken();
+        if (StringUtils.isEmpty(currentToken)) throw new RuntimeException(Constants.ILLEGAl_OPT);
+        Claims claims = JwtUtil.parseToken(currentToken);
+        // 检查 Token 是否过期
+        if (claims.getExpiration() != null && claims.getExpiration().before(new Date())) {
+            throw new RuntimeException(Constants.TOKEN_EXPIRED);
+        }
+
+        String userId = claims.get("userId", String.class);
+        String userName = claims.get("userName", String.class);
+        if (StringUtils.isEmpty(userId) || StringUtils.isEmpty(userName)) {
+            throw new RuntimeException(Constants.INVALID_TOKEN);
+        }
+
+        User user = new User(userId, userName);
+        String newToken = JwtUtil.generateToken(user);
+
+        //更新redis 中当前用户的token
+        stringRedisTemplate.opsForValue().set(userId, newToken, Duration.ofMinutes(120));
+        dto.setNewJwtToken(newToken);
+        return dto;
     }
 
 }
