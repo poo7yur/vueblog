@@ -1,10 +1,12 @@
 package com.example.myApp.demos.util;
 import javax.crypto.SecretKey;
+import javax.servlet.http.HttpServletRequest;
 
 import com.example.myApp.demos.entity.User;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
+import org.apache.commons.lang3.StringUtils;
 
 import java.util.*;
 
@@ -56,6 +58,32 @@ public class JwtUtil {
         } catch (Exception e) {
             // 可根据具体异常类型（过期、签名错误等）做细分处理
             throw new RuntimeException("Token 解析失败：" + e.getMessage());
+        }
+    }
+
+    public static String parseUserFromToken(HttpServletRequest request) {
+        String token = request.getHeader("token");
+        if (StringUtils.isBlank(token)) {
+            return null;
+        }
+        try {
+            Claims claims = JwtUtil.parseToken(token);
+            return claims.getSubject();//返回用户名
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    public static String parseUidFromToken(HttpServletRequest request) {
+        String token = request.getHeader("token");
+        if (StringUtils.isBlank(token)) {
+            return null;
+        }
+        try {
+            Claims claims = JwtUtil.parseToken(token);
+            return claims.get("userId").toString(); //返回用户id
+        } catch (Exception e) {
+            return null;
         }
     }
 }

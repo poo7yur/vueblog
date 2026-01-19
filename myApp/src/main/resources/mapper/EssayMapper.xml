@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.example.myApp.demos.mapper.EssayMapper">
+    <update id="updateShare">
+        update essay set is_share = #{share} where id = #{id}
+    </update>
+
+    <update id="delEssayById">
+        update essay set status = 1 where id = #{param1}
+    </update>
+
+    <select id="queryEssay" resultType="com.example.myApp.demos.entity.Essay">
+        select * from essay where status =0
+        <if test='dto.userId != null and dto.userId != ""'>
+            and create_user = #{dto.userId}
+        </if>
+        <if test='isShare != null '>
+            and is_share = #{isShare}
+        </if>
+        order by update_time desc
+    </select>
+</mapper>

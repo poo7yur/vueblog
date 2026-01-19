@@ -51,6 +51,7 @@ public class MessageController {
     public R<PageInfo<MsgEntity>> getMsg(HttpServletRequest request, @RequestBody PageDto dto) {
         try {
             dto.setUserId(request.getHeader("userId"));
+            dto.setKeyword(request.getHeader("token"));
             return R.ok(logService.getMsg(dto));
         } catch (Exception e) {
             return R.fail(e.getMessage());

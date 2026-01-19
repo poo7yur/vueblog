@@ -2,6 +2,7 @@ package com.example.myApp.demos.service.impl;
 
 import com.example.myApp.demos.service.FileOptService;
 import io.minio.*;
+import io.minio.errors.MinioException;
 import io.minio.http.Method;
 import lombok.Data;
 import org.springframework.beans.factory.annotation.Value;
@@ -11,10 +12,12 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
 import javax.servlet.http.HttpServletResponse;
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
+import java.security.NoSuchAlgorithmException;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -69,7 +72,86 @@ public class MinioFileOptServiceImpl implements FileOptService {
         writeByStream(fileName, inputStream, response);
     }
 
-    private Map<String ,String> getExtraPrams(String fileName){
+    @Override
+    public InputStream readFullPathFile(String fullPath) throws Exception {
+
+        String cleanPath = fullPath.startsWith("/") ? fullPath.substring(1) : fullPath; // 转为 root/essay/20260119/08487.txt
+
+        // 解析桶（bucket）和对象名称（objectName）
+        String[] pathSegments = cleanPath.split("/");
+        if (pathSegments.length < 2) {
+            throw new IllegalArgumentException("文件路径格式非法");
+        }
+        String bucketName = pathSegments[0]; // 提取桶名：root
+        // 拼接对象名称（bucket之后的所有路径，即 essay/20260119/08487.txt）
+        StringBuilder objectName = new StringBuilder();
+        for (int i = 1; i < pathSegments.length; i++) {
+            objectName.append(pathSegments[i]);
+            if (i != pathSegments.length - 1) {
+                objectName.append("/");
+            }
+        }
+
+        // 校验桶是否存在（可选，增强容错性）
+        if (!minioClient.bucketExists(io.minio.BucketExistsArgs.builder().bucket(bucketName).build())) {
+            throw new RuntimeException("MinIO桶不存在：" + bucketName);
+        }
+
+        // 从MinIO获取文件输入流
+        GetObjectArgs getObjectArgs = GetObjectArgs.builder()
+                .bucket(bucketName) // 桶名
+                .object(objectName.toString()) // 存储对象名称（文件在桶内的路径）
+                .build();
+
+        // 6. 返回文件输入流（注意：流的关闭由调用方负责，避免资源泄漏）
+        return minioClient.getObject(getObjectArgs);
+    }
+
+    @Override
+    public void uploadHtmlFile(String fullPath, String htmlContent) throws Exception {
+        String cleanPath = fullPath.startsWith("/") ? fullPath.substring(1) : fullPath;
+        // 解析桶（bucket）和对象名称（objectName）
+        String[] pathSegments = cleanPath.split("/");
+        if (pathSegments.length < 2) {
+            throw new IllegalArgumentException("文件路径格式非法");
+        }
+        String bucketName = pathSegments[0]; // 提取桶名：root
+        // 拼接对象名称（bucket之后的所有路径，即 essay/20260119/08487.txt）
+        StringBuilder objectName = new StringBuilder();
+        for (int i = 1; i < pathSegments.length; i++) {
+            objectName.append(pathSegments[i]);
+            if (i != pathSegments.length - 1) {
+                objectName.append("/");
+            }
+        }
+
+        // 校验桶是否存在（可选，增强容错性）
+        boolean isExist = minioClient.bucketExists(io.minio.BucketExistsArgs.builder().bucket(bucketName).build());
+        if (!isExist) {
+            throw new RuntimeException("MinIO桶不存在：" + bucketName);
+        }
+
+        // 将字符串转换为输入流
+        byte[] contentBytes = htmlContent.getBytes(StandardCharsets.UTF_8);
+        try (InputStream inputStream = new ByteArrayInputStream(contentBytes)) {
+
+            // 执行上传操作
+            minioClient.putObject(
+                    PutObjectArgs.builder()
+                            .bucket(bucketName)
+                            .object(objectName.toString())
+                            .stream(inputStream, contentBytes.length, -1) // -1 表示不限制流的大小（由MinIO自动处理）
+                            .contentType("text/html; charset=utf-8") // 设置内容类型为HTML
+                            .build()
+            );
+
+            System.out.println("文件上传成功: " + bucketName + "/" + objectName);
+        } catch (MinioException | IOException | NoSuchAlgorithmException e) {
+            throw new RuntimeException("文件上传失败: " + e.getMessage(), e);
+        }
+    }
+
+    private Map<String, String> getExtraPrams(String fileName) {
         Map<String, String> extraParams = new HashMap<>();
         if (".jpg".endsWith(fileName.toLowerCase()) || fileName.toLowerCase().endsWith(".jpeg")) {
             extraParams.put("response-content-type", "image/jpeg");

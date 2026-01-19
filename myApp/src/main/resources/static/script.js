@@ -776,9 +776,9 @@ spaceLink.addEventListener("click", async function (e) {
   // 校验登录状态：判断localStorage是否存在用户和token
   const currentUser = localStorage.getItem("currentUser");
   const userToken = localStorage.getItem("userToken");
-  if (!currentUser || !userToken) {
-    alert("请登录后查看我的空间");
-    loginModalMask.style.display = "flex"; // 直接弹出登录框
+  //判断userToken是否失效
+  if ( !currentUser || !userToken || getTokenExpireTime(userToken)===0) {
+    handleTokenExpire();
     return;
   }
 

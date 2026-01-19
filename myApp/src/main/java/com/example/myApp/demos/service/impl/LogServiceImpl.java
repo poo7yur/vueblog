@@ -5,11 +5,14 @@ import com.example.myApp.demos.dto.PageDto;
 import com.example.myApp.demos.entity.MsgEntity;
 import com.example.myApp.demos.mapper.LogMapper;
 import com.example.myApp.demos.service.LogService;
+import com.example.myApp.demos.util.JwtUtil;
 import com.github.pagehelper.PageHelper;
 import com.github.pagehelper.PageInfo;
+import io.jsonwebtoken.Claims;
 import org.springframework.stereotype.Service;
 
 import javax.annotation.Resource;
+import java.util.Date;
 import java.util.List;
 import java.util.Set;
 
@@ -21,6 +24,11 @@ public class LogServiceImpl implements LogService {
 
     @Override
     public PageInfo<MsgEntity> getMsg(PageDto dto) {
+        // 0. 判断token是否失效
+        Claims claims = JwtUtil.parseToken(dto.getKeyword());
+        if (claims.getExpiration() != null && claims.getExpiration().before(new Date())) {
+            throw new RuntimeException(Constants.TOKEN_EXPIRED);
+        }
         String userId = dto.getUserId();
         // 1. 查询订阅的消息组ID
         Set<String> groupIds = logMapper.getMsgGroupIds(userId);
