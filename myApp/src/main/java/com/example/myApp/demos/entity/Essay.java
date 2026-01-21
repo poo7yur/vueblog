@@ -17,7 +17,14 @@ public class Essay {
     private String storagePath;
     private String category;
     private Date updateTime;
+    private String createUser;
     private int status;
     private int isShare;
-    private String htmlContent;
+
+    public Essay(String id, String title, String summary, Date updateTime) {
+        this.id = id;
+        this.title = title;
+        this.summary = summary;
+        this.updateTime = updateTime;
+    }
 }

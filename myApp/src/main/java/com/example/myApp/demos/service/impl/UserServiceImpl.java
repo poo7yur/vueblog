@@ -8,6 +8,7 @@ import com.example.myApp.demos.dto.TokenDto;
 import com.example.myApp.demos.dto.UserGroup;
 import com.example.myApp.demos.entity.User;
 import com.example.myApp.demos.mapper.UserMapper;
+import com.example.myApp.demos.service.FileOptService;
 import com.example.myApp.demos.service.UserService;
 import com.example.myApp.demos.util.JwtUtil;
 import com.example.myApp.demos.util.Md5Util;
@@ -33,6 +34,9 @@ import java.util.List;
 
 @Service
 public class UserServiceImpl implements UserService {
+
+    @Resource
+    private FileOptService fileOptService;
 
     @Resource
     private UserMapper userMapper;

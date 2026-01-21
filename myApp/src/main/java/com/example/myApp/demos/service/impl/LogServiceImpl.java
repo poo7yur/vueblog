@@ -12,6 +12,7 @@ import io.jsonwebtoken.Claims;
 import org.springframework.stereotype.Service;
 
 import javax.annotation.Resource;
+import javax.servlet.http.HttpServletRequest;
 import java.util.Date;
 import java.util.List;
 import java.util.Set;
@@ -23,13 +24,13 @@ public class LogServiceImpl implements LogService {
     private LogMapper logMapper;
 
     @Override
-    public PageInfo<MsgEntity> getMsg(PageDto dto) {
+    public PageInfo<MsgEntity> getMsg(PageDto dto, HttpServletRequest request) {
         // 0. 判断token是否失效
-        Claims claims = JwtUtil.parseToken(dto.getKeyword());
+        Claims claims = JwtUtil.parseToken(request.getHeader("token"));
         if (claims.getExpiration() != null && claims.getExpiration().before(new Date())) {
             throw new RuntimeException(Constants.TOKEN_EXPIRED);
         }
-        String userId = dto.getUserId();
+        String userId = claims.get("userId").toString();
         // 1. 查询订阅的消息组ID
         Set<String> groupIds = logMapper.getMsgGroupIds(userId);
 

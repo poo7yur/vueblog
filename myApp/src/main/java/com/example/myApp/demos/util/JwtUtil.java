@@ -67,7 +67,7 @@ public class JwtUtil {
             return null;
         }
         try {
-            Claims claims = JwtUtil.parseToken(token);
+            Claims claims = parseToken(token);
             return claims.getSubject();//返回用户名
         } catch (Exception e) {
             return null;
@@ -80,7 +80,7 @@ public class JwtUtil {
             return null;
         }
         try {
-            Claims claims = JwtUtil.parseToken(token);
+            Claims claims = parseToken(token);
             return claims.get("userId").toString(); //返回用户id
         } catch (Exception e) {
             return null;

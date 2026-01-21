@@ -15,4 +15,8 @@ public interface EssayMapper {
 
     void delEssayById(String id);
 
+    void createEssay(@Param("e") Essay essay);
+
+    void updateEssay(Essay essay);
+
 }

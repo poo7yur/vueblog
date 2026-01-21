@@ -75,7 +75,7 @@ public class MinioFileOptServiceImpl implements FileOptService {
     @Override
     public InputStream readFullPathFile(String fullPath) throws Exception {
 
-        String cleanPath = fullPath.startsWith("/") ? fullPath.substring(1) : fullPath; // 转为 root/essay/20260119/08487.txt
+        String cleanPath = fullPath.startsWith("/") ? fullPath.substring(1) : fullPath;
 
         // 解析桶（bucket）和对象名称（objectName）
         String[] pathSegments = cleanPath.split("/");
@@ -125,10 +125,8 @@ public class MinioFileOptServiceImpl implements FileOptService {
             }
         }
 
-        // 校验桶是否存在（可选，增强容错性）
-        boolean isExist = minioClient.bucketExists(io.minio.BucketExistsArgs.builder().bucket(bucketName).build());
-        if (!isExist) {
-            throw new RuntimeException("MinIO桶不存在：" + bucketName);
+        if (!minioClient.bucketExists(io.minio.BucketExistsArgs.builder().bucket(bucketName).build())) {
+            minioClient.makeBucket(MakeBucketArgs.builder().bucket(bucketName).build());  // 创建桶
         }
 
         // 将字符串转换为输入流

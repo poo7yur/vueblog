@@ -30,6 +30,17 @@ public class EssayController {
     @Resource
     private FileOptService fileOptService;
 
+    @PostMapping("/createEssay")
+    public R<String> createEssay(@RequestBody EssayDto essayDto, HttpServletRequest request) {
+        try {
+            if (Objects.isNull(essayDto) || StringUtils.isEmpty(essayDto.getTitle()))
+                throw new RuntimeException(Constants.ILLEGAl_OPT);
+            return R.ok(essayService.createEssay(essayDto, request));
+        } catch (Exception e) {
+            return R.fail(e.getMessage());
+        }
+    }
+
     @PostMapping("/queryEssay")
     public R<PageInfo<Essay>> queryEssay(@RequestBody PageDto dto, HttpServletRequest request) {
         dto.setUserId(JwtUtil.parseUidFromToken(request));

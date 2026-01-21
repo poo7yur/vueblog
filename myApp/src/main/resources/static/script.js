@@ -606,7 +606,6 @@ function fetchMessages() {
   fetch("/getMsg", {
     method: "POST",
     headers: {
-      userId: localStorage.getItem("currentUserId"),
       "Content-Type": "application/json; charset=utf-8",
     },
     body: JSON.stringify({

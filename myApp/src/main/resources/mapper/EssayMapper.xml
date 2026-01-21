@@ -1,12 +1,20 @@
 <?xml version="1.0" encoding="UTF-8" ?>
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
 <mapper namespace="com.example.myApp.demos.mapper.EssayMapper">
+    <insert id="createEssay">
+        insert into essay (id ,title ,storage_path ,create_user ,update_time ) values (#{e.id} ,#{e.title} ,#{e.storagePath} ,#{e.createUser} ,#{e.updateTime} )
+    </insert>
+
     <update id="updateShare">
         update essay set is_share = #{share} where id = #{id}
     </update>
 
     <update id="delEssayById">
         update essay set status = 1 where id = #{param1}
+    </update>
+
+    <update id="updateEssay">
+        update essay set title =#{title} , summary =#{summary} ,update_time =#{updateTime} where id =#{id}
     </update>
 
     <select id="queryEssay" resultType="com.example.myApp.demos.entity.Essay">
