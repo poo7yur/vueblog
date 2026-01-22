@@ -21,6 +21,7 @@ public class User {
     private String role;
     private int status;
     private double defaultMb;
+    private String headPicUrl;
 
     public User(String userId ,String name){
         this.userId = userId;

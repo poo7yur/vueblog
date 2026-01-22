@@ -22,6 +22,8 @@ public class Constants {
 
     public static final String TOKEN_EXPIRED = "token已过期";
 
+    public static final String ERROR_LINK_URL = "url无效";
+
     public static final String INVALID_TOKEN = "无效的token";
 
     public static final String NOT_ALLOWED = "目标存在子目录时不允许放图片";

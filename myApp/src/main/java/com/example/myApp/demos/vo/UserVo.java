@@ -13,4 +13,5 @@ public class UserVo {
     private String phone;
     private Date createTime;
     private String token;
+    private String headPicUrl;
 }

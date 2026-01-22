@@ -9,4 +9,5 @@ public class PageDto {
     private Integer pageNum;
     private Integer pageSize;
     private String userId;
+    private int type=0;
 }

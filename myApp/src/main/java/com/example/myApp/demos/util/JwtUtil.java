@@ -57,7 +57,7 @@ public class JwtUtil {
                     .getBody();
         } catch (Exception e) {
             // 可根据具体异常类型（过期、签名错误等）做细分处理
-            throw new RuntimeException("Token 解析失败：" + e.getMessage());
+            throw new RuntimeException("Token已失效");
         }
     }
 

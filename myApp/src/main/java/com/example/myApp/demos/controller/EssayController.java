@@ -2,6 +2,7 @@ package com.example.myApp.demos.controller;
 
 import com.example.myApp.demos.Constants;
 import com.example.myApp.demos.dto.EssayDto;
+import com.example.myApp.demos.dto.LinkDto;
 import com.example.myApp.demos.dto.PageDto;
 import com.example.myApp.demos.entity.Essay;
 import com.example.myApp.demos.entity.R;
@@ -97,6 +98,17 @@ public class EssayController {
             } catch (IOException ioException) {
                 throw new RuntimeException("无法写入错误响应: " + ioException.getMessage());
             }
+        }
+    }
+
+    @PostMapping("/saveLink")
+    public R<String> saveLink(@RequestBody LinkDto dto, HttpServletRequest request) {
+        try {
+            dto.setUser(JwtUtil.parseUidFromToken(request));
+            String msg = essayService.saveLink(dto);
+            return R.ok(msg);
+        } catch (Exception e) {
+            return R.fail(e.getMessage());
         }
     }
 

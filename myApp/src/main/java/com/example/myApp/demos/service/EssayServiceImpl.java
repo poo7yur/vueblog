@@ -3,6 +3,7 @@ package com.example.myApp.demos.service;
 import cn.hutool.core.util.RandomUtil;
 import com.example.myApp.demos.Constants;
 import com.example.myApp.demos.dto.EssayDto;
+import com.example.myApp.demos.dto.LinkDto;
 import com.example.myApp.demos.dto.PageDto;
 import com.example.myApp.demos.entity.Essay;
 import com.example.myApp.demos.mapper.EssayMapper;
@@ -10,6 +11,7 @@ import com.example.myApp.demos.util.JwtUtil;
 import com.github.pagehelper.PageHelper;
 import com.github.pagehelper.PageInfo;
 import org.apache.commons.lang3.StringUtils;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -29,6 +31,12 @@ public class EssayServiceImpl implements EssayService {
 
     @Resource
     private FileOptService fileOptService;
+
+    @Resource
+    private PyScriptService pyScriptService;
+
+    @Value("${output.dir}")
+    private String outputDir;
 
     private static final SimpleDateFormat sdf = new SimpleDateFormat("yyyyMMdd");
 
@@ -62,8 +70,8 @@ public class EssayServiceImpl implements EssayService {
         String storagePath = essayDto.getStoragePath();
         String title = essayDto.getTitle();
         String id = essayDto.getId();
-        String summary =getSummary(htmlContent);
-        essayMapper.updateEssay(new Essay(id ,title ,summary ,new Date()));
+        String summary = getSummary(htmlContent);
+        essayMapper.updateEssay(new Essay(id, title, summary, new Date()));
         fileOptService.uploadHtmlFile(storagePath, htmlContent);
         return "保存成功";
     }
@@ -110,11 +118,34 @@ public class EssayServiceImpl implements EssayService {
         essay.setId(id);
         essay.setTitle(essayDto.getTitle());
         essay.setUpdateTime(date);
+        essay.setType(0);
         essay.setCreateUser(userId);
         String fullpath = "/" + userName + ESSAY + ymd + "/" + id + ".txt";
         essay.setStoragePath(fullpath);
         essayMapper.createEssay(essay);
         fileOptService.uploadHtmlFile(fullpath, "");
         return "创建成功";
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public String saveLink(LinkDto dto) {
+        String taskId = RandomUtil.randomNumbers(10);
+        String user = dto.getUser();
+        if (StringUtils.isEmpty(user)) throw new RuntimeException(Constants.TOKEN_EXPIRED);
+        String url = dto.getLinkUrl();
+        if (StringUtils.isEmpty(url)) throw new RuntimeException(Constants.ERROR_LINK_URL);
+        //调用py脚本 生成一个html
+        pyScriptService.callBsScript(taskId, url);
+        //保存到essay表
+        Essay essay = new Essay();
+        essay.setId(taskId);
+        essay.setTitle(url);
+        essay.setUpdateTime(new Date());
+        essay.setType(1);
+        essay.setCreateUser(user);
+        essay.setStoragePath(outputDir + taskId + ".html");
+        essayMapper.createEssay(essay);
+        return "保存成功";
     }
 }

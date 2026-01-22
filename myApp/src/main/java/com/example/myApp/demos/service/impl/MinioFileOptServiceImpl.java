@@ -35,19 +35,18 @@ public class MinioFileOptServiceImpl implements FileOptService {
     }
 
     @Override
-    public String uploadFile(MultipartFile file) throws Exception {
+    public String uploadFile(MultipartFile file, String objName) throws Exception {
         //检查桶是否存在 不在新建桶
         if (!minioClient.bucketExists(BucketExistsArgs.builder().bucket(bucket).build())) {
             minioClient.makeBucket(MakeBucketArgs.builder().bucket(bucket).build());
         }
-        long dir = System.currentTimeMillis();
+
         String originalFilename = file.getOriginalFilename();
-        String fileName = dir + "/" + originalFilename;
         try (InputStream inputStream = file.getInputStream()) {
             minioClient.putObject(
                     PutObjectArgs.builder()
                             .bucket(bucket)
-                            .object(fileName)
+                            .object(objName)
                             .stream(inputStream, file.getSize(), -1)
                             .contentType(file.getContentType())
                             .build()
@@ -58,7 +57,7 @@ public class MinioFileOptServiceImpl implements FileOptService {
                 .bucket(bucket)
                 .method(Method.GET)
                 .expiry(7 * 24 * 3600)
-                .object(fileName).extraQueryParams(getExtraPrams(originalFilename))
+                .object(objName).extraQueryParams(getExtraPrams(originalFilename))
                 .build());
     }
 

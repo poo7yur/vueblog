@@ -21,15 +21,15 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 
 import javax.annotation.Resource;
+import javax.servlet.http.HttpServletRequest;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.Duration;
-import java.util.ArrayList;
-import java.util.Date;
-import java.util.List;
+import java.util.*;
 
 
 @Service
@@ -46,6 +46,9 @@ public class UserServiceImpl implements UserService {
 
     @Value("${file.dir}")
     private String fileDir;
+
+    private static final List<String> ALLOW_IMG =
+            Arrays.asList("image/png", "image/jpg", "image/jpeg", "image/webp", "image/bmp");
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -126,6 +129,39 @@ public class UserServiceImpl implements UserService {
         stringRedisTemplate.opsForValue().set(userId, newToken, Duration.ofMinutes(120));
         dto.setNewJwtToken(newToken);
         return dto;
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public String changeAvatar(MultipartFile file, HttpServletRequest request) throws Exception {
+        //使用minio存头像图片 返回共享一个url 存在用户表head_pic_url字段
+        String userId = JwtUtil.parseUidFromToken(request);
+        validate(file);
+        String folder = "avatar/" + userId;
+        String suffix = getSuffix(file.getOriginalFilename());
+        String objName = folder + "/" + RandomUtil.randomNumbers(6) + suffix;
+        String shareUrl = fileOptService.uploadFile(file, objName);
+        userMapper.updateAvatar(shareUrl, userId);
+        return shareUrl;
+    }
+
+    private void validate(MultipartFile file) {
+        int maxSize = 600 * 1024;
+        if (file == null || file.isEmpty()) {
+            throw new RuntimeException("头像不能为空");
+        }
+        if (file.getSize() > maxSize) {
+            throw new RuntimeException("头像大小不能超过 " + (maxSize / 1024) + " KB");
+        }
+        if (!ALLOW_IMG.contains(file.getContentType().toLowerCase(Locale.ROOT))) {
+            throw new RuntimeException("仅支持 png、jpg、jpeg、webp、bmp 格式");
+        }
+    }
+
+    private static String getSuffix(String fileName) {
+        if (fileName == null) return ".jpg";
+        int dot = fileName.lastIndexOf('.');
+        return dot == -1 ? ".jpg" : fileName.substring(dot);
     }
 
 }

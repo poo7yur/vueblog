@@ -16,7 +16,7 @@ public class LocalResourceConfig implements WebMvcConfigurer {
     @Override
     public void addResourceHandlers(ResourceHandlerRegistry registry) {
         String localPath = "file:" + fileDir;
-        log.info("映射的localPath: {}", localPath);
+        log.info("mapping localPath: {}", localPath);
 
         registry
                 .addResourceHandler("/static/**")   // URL 访问前缀

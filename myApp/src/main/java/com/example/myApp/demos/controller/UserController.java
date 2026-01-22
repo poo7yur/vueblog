@@ -10,6 +10,7 @@ import com.example.myApp.demos.vo.UserVo;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MultipartFile;
 
 import javax.annotation.Resource;
 import javax.servlet.http.HttpServletRequest;
@@ -38,6 +39,16 @@ public class UserController {
             UserVo userVo = userService.login(loginDto);
             return R.ok(userVo);
         } catch (Exception e) {
+            return R.fail(e.getMessage());
+        }
+    }
+
+    @PostMapping("/changeAvatar")
+    public R<String> changeAvatar(MultipartFile file, HttpServletRequest request) {
+        try {
+            String msg = userService.changeAvatar(file, request);
+            return R.ok(msg);
+        }catch (Exception e){
             return R.fail(e.getMessage());
         }
     }

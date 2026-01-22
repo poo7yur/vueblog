@@ -10,7 +10,6 @@ import com.example.myApp.demos.service.FileOptService;
 import com.example.myApp.demos.service.LogService;
 import com.github.pagehelper.PageInfo;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.web.multipart.MultipartFile;
 
 import javax.annotation.Resource;
 import javax.servlet.http.HttpServletRequest;
@@ -25,19 +24,6 @@ public class MessageController {
 
     @Resource
     private FileOptService fileOptService;
-
-    @PostMapping("/upload")
-    @AccessLog(module = "file manage", description = "upload file")
-    public R<String> uploadFile(@RequestPart("file") MultipartFile file) {
-        String msg;
-        try {
-            msg = fileOptService.uploadFile(file);
-            return R.ok(msg);
-        } catch (Exception e) {
-            msg = "上传失败：" + e.getMessage();
-            return R.fail(msg);
-        }
-    }
 
     @GetMapping("/download")
     @AccessLog(module = "file manage", description = "download file")

@@ -20,6 +20,7 @@ public class Essay {
     private String createUser;
     private int status;
     private int isShare;
+    private int type;
 
     public Essay(String id, String title, String summary, Date updateTime) {
         this.id = id;

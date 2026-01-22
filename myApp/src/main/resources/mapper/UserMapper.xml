@@ -13,6 +13,10 @@
         </foreach>
     </insert>
 
+    <update id="updateAvatar">
+        update t_user set head_pic_url =#{param1} where user_id =#{param2}
+    </update>
+
     <select id="findUser" resultType="com.example.myApp.demos.entity.User">
         select * from t_user where name =#{name} and status =0
     </select>

@@ -19,4 +19,6 @@ public interface UserMapper {
 
     void subscribeMsg(@Param("list") List<UserGroup> list);
 
+    void updateAvatar(String shareUrl, String userId);
+
 }

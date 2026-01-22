@@ -46,7 +46,7 @@ minio:
   endpoint: http://192.168.146.100:9000
   access-key: minio
   secret-key: Minio@123
-  bucket: 264
+  bucket: pic
 server:
   tomcat:
     max-swallow-size: 10MB

@@ -2,7 +2,7 @@
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
 <mapper namespace="com.example.myApp.demos.mapper.EssayMapper">
     <insert id="createEssay">
-        insert into essay (id ,title ,storage_path ,create_user ,update_time ) values (#{e.id} ,#{e.title} ,#{e.storagePath} ,#{e.createUser} ,#{e.updateTime} )
+        insert into essay (id ,title ,storage_path ,create_user ,update_time ,type ) values (#{e.id} ,#{e.title} ,#{e.storagePath} ,#{e.createUser} ,#{e.updateTime} ,#{e.type} )
     </insert>
 
     <update id="updateShare">
@@ -18,13 +18,14 @@
     </update>
 
     <select id="queryEssay" resultType="com.example.myApp.demos.entity.Essay">
-        select * from essay where status =0
+        select e.id ,e.summary ,e.title ,e.category ,e.storage_path ,e.is_share ,u.name as createUser
+        from essay e left join t_user u on u.user_id = e.create_user where e.status =0 and e.type =#{dto.type}
         <if test='dto.userId != null and dto.userId != ""'>
-            and create_user = #{dto.userId}
+            and e.create_user = #{dto.userId}
         </if>
         <if test='isShare != null '>
-            and is_share = #{isShare}
+            and e.is_share = #{isShare}
         </if>
-        order by update_time desc
+        order by e.update_time desc
     </select>
 </mapper>
