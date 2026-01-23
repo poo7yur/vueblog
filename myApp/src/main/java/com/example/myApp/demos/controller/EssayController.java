@@ -49,7 +49,7 @@ public class EssayController {
     }
 
     @PostMapping("/saveEssayContent")
-    public R<String> saveEssayContent(@RequestBody EssayDto essayDto, HttpServletRequest request) {
+    public R<String> saveEssayContent(@RequestBody EssayDto essayDto) {
         try {
             if (Objects.isNull(essayDto) || StringUtils.isEmpty(essayDto.getId()))
                 throw new RuntimeException(Constants.ILLEGAl_OPT);
@@ -60,7 +60,7 @@ public class EssayController {
     }
 
     @PostMapping("/publishEssay")
-    public R<String> publishEssay(@RequestBody EssayDto essayDto, HttpServletRequest request) {
+    public R<String> publishEssay(@RequestBody EssayDto essayDto) {
         try {
             if (Objects.isNull(essayDto) || 1 != essayDto.getStatus())
                 throw new RuntimeException(Constants.ILLEGAl_OPT);
@@ -114,7 +114,19 @@ public class EssayController {
 
     private void writeByStream(EssayDto essayDto, HttpServletResponse response, String fileName) throws Exception {
         // 获取文件输入流
-        InputStream ins = fileOptService.readFullPathFile(essayDto.getStoragePath());
+        String storagePath = essayDto.getStoragePath();
+
+        // 获取操作系统类型（Windows: "Windows XP/7/10/Server"，Linux: "Linux"，Mac: "Mac OS X"）
+        String osName = System.getProperty("os.name").toLowerCase();
+        if(osName.contains("windows")){
+            if (storagePath.startsWith("/")) {
+                storagePath = storagePath.substring(1); // 去掉开头的/
+            }
+            // 替换Linux路径分隔符为Windows分隔符，拼接D:
+            storagePath = "D:\\" + storagePath.replace("/", "\\");
+        }
+
+        InputStream ins = fileOptService.readFullPathFile(storagePath);
 
         // 设置响应头
         response.setContentType("application/octet-stream"); // 通用二进制流类型

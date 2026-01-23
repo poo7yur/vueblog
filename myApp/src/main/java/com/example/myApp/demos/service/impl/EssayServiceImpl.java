@@ -1,4 +1,4 @@
-package com.example.myApp.demos.service;
+package com.example.myApp.demos.service.impl;
 
 import cn.hutool.core.util.RandomUtil;
 import com.example.myApp.demos.Constants;
@@ -7,6 +7,9 @@ import com.example.myApp.demos.dto.LinkDto;
 import com.example.myApp.demos.dto.PageDto;
 import com.example.myApp.demos.entity.Essay;
 import com.example.myApp.demos.mapper.EssayMapper;
+import com.example.myApp.demos.service.EssayService;
+import com.example.myApp.demos.service.FileOptService;
+import com.example.myApp.demos.service.PyScriptService;
 import com.example.myApp.demos.util.JwtUtil;
 import com.github.pagehelper.PageHelper;
 import com.github.pagehelper.PageInfo;
@@ -120,7 +123,7 @@ public class EssayServiceImpl implements EssayService {
         essay.setUpdateTime(date);
         essay.setType(0);
         essay.setCreateUser(userId);
-        String fullpath = "/" + userName + ESSAY + ymd + "/" + id + ".txt";
+        String fullpath = ESSAY + userId + "/" + ymd + "/" + id + ".txt";
         essay.setStoragePath(fullpath);
         essayMapper.createEssay(essay);
         fileOptService.uploadHtmlFile(fullpath, "");

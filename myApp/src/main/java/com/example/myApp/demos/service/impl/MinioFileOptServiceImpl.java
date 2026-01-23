@@ -6,6 +6,7 @@ import io.minio.errors.MinioException;
 import io.minio.http.Method;
 import lombok.Data;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
@@ -23,6 +24,11 @@ import java.util.Map;
 
 @Service
 @Data
+@ConditionalOnProperty(
+        prefix = "minio",
+        name = "enabled",
+        havingValue = "true"
+)
 public class MinioFileOptServiceImpl implements FileOptService {
 
     private final MinioClient minioClient;
@@ -61,15 +67,6 @@ public class MinioFileOptServiceImpl implements FileOptService {
                 .build());
     }
 
-    @Override
-    public void downloadFile(String fileId, String fileName, HttpServletResponse response) throws Exception {
-        String objName = fileId + "/" + fileName;
-        InputStream inputStream = minioClient.getObject(GetObjectArgs.builder()
-                .bucket(bucket)
-                .object(objName)
-                .build());
-        writeByStream(fileName, inputStream, response);
-    }
 
     @Override
     public InputStream readFullPathFile(String fullPath) throws Exception {

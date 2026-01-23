@@ -50,6 +50,9 @@ public class UserServiceImpl implements UserService {
     private static final List<String> ALLOW_IMG =
             Arrays.asList("image/png", "image/jpg", "image/jpeg", "image/webp", "image/bmp");
 
+    public static final List<String> KEEP_WORD =
+            Arrays.asList("share", "public", "avatar");
+
     @Override
     @Transactional(rollbackFor = Exception.class)
     public String addUsr(RegisterDto dto) throws Exception {
@@ -57,9 +60,8 @@ public class UserServiceImpl implements UserService {
         if (StringUtils.isEmpty(dto.getPassword()) || StringUtils.isEmpty(name))
             throw new RuntimeException(Constants.PWD_NAME_NOT_NULL);
         //系统保留的特殊词不能当用户名
-        if ("share".equals(name) || "public".equals(name)) {
+        if (KEEP_WORD.contains(name))
             throw new RuntimeException(Constants.USED_NAME);
-        }
         //判断下名称是否被用掉
         User u = userMapper.findUser(name);
         if (!ObjectUtils.isEmpty(u)) throw new RuntimeException(Constants.USED_NAME);
@@ -134,13 +136,10 @@ public class UserServiceImpl implements UserService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public String changeAvatar(MultipartFile file, HttpServletRequest request) throws Exception {
-        //使用minio存头像图片 返回共享一个url 存在用户表head_pic_url字段
         String userId = JwtUtil.parseUidFromToken(request);
+        if (StringUtils.isEmpty(userId)) throw new RuntimeException(Constants.INVALID_TOKEN);
         validate(file);
-        String folder = "avatar/" + userId;
-        String suffix = getSuffix(file.getOriginalFilename());
-        String objName = folder + "/" + RandomUtil.randomNumbers(6) + suffix;
-        String shareUrl = fileOptService.uploadFile(file, objName);
+        String shareUrl = fileOptService.uploadFile(file, userId);
         userMapper.updateAvatar(shareUrl, userId);
         return shareUrl;
     }
@@ -153,7 +152,7 @@ public class UserServiceImpl implements UserService {
         if (file.getSize() > maxSize) {
             throw new RuntimeException("头像大小不能超过 " + (maxSize / 1024) + " KB");
         }
-        if (!ALLOW_IMG.contains(file.getContentType().toLowerCase(Locale.ROOT))) {
+        if (!ALLOW_IMG.contains(Objects.requireNonNull(file.getContentType()).toLowerCase(Locale.ROOT))) {
             throw new RuntimeException("仅支持 png、jpg、jpeg、webp、bmp 格式");
         }
     }

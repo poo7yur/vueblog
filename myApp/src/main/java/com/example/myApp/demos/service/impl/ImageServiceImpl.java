@@ -16,7 +16,6 @@ import com.example.myApp.demos.service.ImageService;
 import com.example.myApp.demos.util.DirUtil;
 import com.example.myApp.demos.util.JwtUtil;
 import com.example.myApp.demos.vo.PageImageVo;
-import io.jsonwebtoken.Claims;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.rocketmq.client.producer.DefaultMQProducer;

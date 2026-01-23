@@ -16,6 +16,7 @@ public class DirUtil {
 
     public static Node buildTree(Path dir, String loginUser, Set<String> allUserNames) {
         String dirName = dir.getFileName().toString();
+        allUserNames.add("avatar");
 
         // 如果是“用户目录”且不是当前登录用户的目录，则直接跳过（不返回该分支）
         boolean isUserDir = allUserNames.contains(dirName);
