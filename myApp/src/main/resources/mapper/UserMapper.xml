@@ -25,4 +25,8 @@
         select name from t_user
     </select>
 
+    <select id="getRoleByUid" resultType="java.lang.String">
+        SELECT tr.role_name from t_user tu inner join t_role_user tru  on tru.user_id =tu.user_id  inner join t_role tr on tr.role_id  = tru.role_id where tu.user_id =#{param1}
+    </select>
+
 </mapper>

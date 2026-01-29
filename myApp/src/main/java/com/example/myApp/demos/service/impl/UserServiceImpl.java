@@ -144,6 +144,15 @@ public class UserServiceImpl implements UserService {
         return shareUrl;
     }
 
+    @Override
+    public boolean checkAdminRole(String userId) {
+        if(StringUtils.isEmpty(userId)) throw new RuntimeException(Constants.ILLEGAl_OPT);
+        boolean isAdmin = false;
+        Set<String> roles = userMapper.getRoleByUid(userId);
+        if(roles.contains("admin")) isAdmin = true;
+        return isAdmin;
+    }
+
     private void validate(MultipartFile file) {
         int maxSize = 600 * 1024;
         if (file == null || file.isEmpty()) {

@@ -9,7 +9,7 @@ import java.util.List;
 
 @Mapper
 public interface EssayMapper {
-    List<Essay> queryEssay(@Param("dto") PageDto dto ,@Param("isShare") Integer isShare);
+    List<Essay> queryEssay(@Param("dto") PageDto dto ,@Param("uid") String uid);
 
     void updateShare(@Param("id") String id, @Param("share") Integer share);
 

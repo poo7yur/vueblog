@@ -10,4 +10,8 @@ public class LinkDto {
     private String user;
 
     private String id;
+
+    private String title;
+
+    private int isPublic;
 }

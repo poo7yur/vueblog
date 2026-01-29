@@ -14,18 +14,31 @@
     </update>
 
     <update id="updateEssay">
-        update essay set title =#{title} , summary =#{summary} ,update_time =#{updateTime} where id =#{id}
+        update essay set is_public =#{isPublic},
+        <if test='title != null and title!= ""'>title = #{title},</if>
+        <if test='summary != null and summary!= ""'>summary = #{summary},</if>
+        update_time =now() where id =#{id}
     </update>
 
     <select id="queryEssay" resultType="com.example.myApp.demos.entity.Essay">
         select e.id ,e.summary ,e.title ,e.category ,e.storage_path ,e.is_share ,u.name as createUser
-        from essay e left join t_user u on u.user_id = e.create_user where e.status =0 and e.type =#{dto.type}
-        <if test='dto.userId != null and dto.userId != ""'>
-            and e.create_user = #{dto.userId}
-        </if>
-        <if test='isShare != null '>
-            and e.is_share = #{isShare}
-        </if>
+        from essay e inner join t_user u on u.user_id = e.create_user
+        where e.status =0 and e.type =#{dto.type} and
+        <choose>
+            <when test='uid !=null'>
+                e.create_user = #{uid}
+                or (e.is_public = 1 and e.is_share = 1 and e.type =#{dto.type})
+                or (e.is_public = 0 and e.is_share = 1 and e.type =#{dto.type} and exists (
+                SELECT 1 FROM user_follow uf
+                where uf.follower_id = #{uid}
+                and uf.following_id = e.create_user
+                and uf.status = 1
+                ))
+            </when>
+            <otherwise>
+               e.is_public = 1 and e.is_share = 1
+            </otherwise>
+        </choose>
         order by e.update_time desc
     </select>
 </mapper>

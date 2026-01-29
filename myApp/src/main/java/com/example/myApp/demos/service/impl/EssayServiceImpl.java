@@ -1,6 +1,7 @@
 package com.example.myApp.demos.service.impl;
 
 import cn.hutool.core.util.RandomUtil;
+import cn.hutool.core.util.StrUtil;
 import com.example.myApp.demos.Constants;
 import com.example.myApp.demos.dto.EssayDto;
 import com.example.myApp.demos.dto.LinkDto;
@@ -13,6 +14,7 @@ import com.example.myApp.demos.service.PyScriptService;
 import com.example.myApp.demos.util.JwtUtil;
 import com.github.pagehelper.PageHelper;
 import com.github.pagehelper.PageInfo;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -27,6 +29,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 @Service
+@Slf4j
 public class EssayServiceImpl implements EssayService {
 
     @Resource
@@ -48,9 +51,8 @@ public class EssayServiceImpl implements EssayService {
     @Override
     public PageInfo<Essay> queryEssay(PageDto dto) {
         PageHelper.startPage(dto.getPageNum(), dto.getPageSize());
-        Integer share = 1;
-        if (!StringUtils.isEmpty(dto.getUserId())) share = null;
-        List<Essay> list = essayMapper.queryEssay(dto, share);
+        String uid =dto.getUserId();
+        List<Essay> list = essayMapper.queryEssay(dto, uid);
         return new PageInfo<>(list);
     }
 
@@ -74,7 +76,7 @@ public class EssayServiceImpl implements EssayService {
         String title = essayDto.getTitle();
         String id = essayDto.getId();
         String summary = getSummary(htmlContent);
-        essayMapper.updateEssay(new Essay(id, title, summary, new Date()));
+        essayMapper.updateEssay(new Essay(id, title, summary, essayDto.getIsPublic()));
         fileOptService.uploadHtmlFile(storagePath, htmlContent);
         return "保存成功";
     }
@@ -123,10 +125,10 @@ public class EssayServiceImpl implements EssayService {
         essay.setUpdateTime(date);
         essay.setType(0);
         essay.setCreateUser(userId);
-        String fullpath = ESSAY + userId + "/" + ymd + "/" + id + ".txt";
-        essay.setStoragePath(fullpath);
+        String fullPath = ESSAY + userId + "/" + ymd + "/" + id + ".txt";
+        essay.setStoragePath(fullPath);
         essayMapper.createEssay(essay);
-        fileOptService.uploadHtmlFile(fullpath, "");
+        fileOptService.uploadHtmlFile(fullPath, "");
         return "创建成功";
     }
 
@@ -138,17 +140,30 @@ public class EssayServiceImpl implements EssayService {
         if (StringUtils.isEmpty(user)) throw new RuntimeException(Constants.TOKEN_EXPIRED);
         String url = dto.getLinkUrl();
         if (StringUtils.isEmpty(url)) throw new RuntimeException(Constants.ERROR_LINK_URL);
-        //调用py脚本 生成一个html
-        pyScriptService.callBsScript(taskId, url);
-        //保存到essay表
+        int isPublic = dto.getIsPublic();
         Essay essay = new Essay();
         essay.setId(taskId);
-        essay.setTitle(url);
+        essay.setTitle("");
         essay.setUpdateTime(new Date());
         essay.setType(1);
         essay.setCreateUser(user);
-        essay.setStoragePath(outputDir + taskId + ".html");
+        essay.setStoragePath(outputDir + "/" + taskId + ".html");
         essayMapper.createEssay(essay);
+        //调用py脚本 生成一个html
+        pyScriptService.invokeBsScript(taskId, url, r -> handleSuccess(taskId, r, isPublic), e -> handleFailure(taskId, e));
         return "保存成功";
+    }
+
+    // 成功处理
+    private void handleSuccess(String taskId, String result, int isPublic) {
+        log.info("{}处理成功", taskId);
+        //把result更新到文章标题
+        if (StrUtil.isNotEmpty(result)) essayMapper.updateEssay(new Essay(taskId, result, result, isPublic));
+    }
+
+    // 失败处理
+    private void handleFailure(String taskId, Throwable error) {
+        log.error("{}处理失败：{}", taskId, error.getMessage());
+        essayMapper.delEssayById(taskId);//删除记录保持原子性
     }
 }

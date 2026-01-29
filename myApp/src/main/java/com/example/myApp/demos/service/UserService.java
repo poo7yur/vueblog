@@ -16,4 +16,7 @@ public interface UserService {
     TokenDto refreshToken(TokenDto dto);
 
     String changeAvatar(MultipartFile file, HttpServletRequest request) throws Exception;
+
+    boolean checkAdminRole(String userId);
+
 }

@@ -10,4 +10,5 @@ public class EssayDto {
     private int status;
     private String content;
     private String title;
+    private int isPublic;
 }

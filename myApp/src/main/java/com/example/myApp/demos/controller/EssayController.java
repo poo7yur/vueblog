@@ -8,8 +8,11 @@ import com.example.myApp.demos.entity.Essay;
 import com.example.myApp.demos.entity.R;
 import com.example.myApp.demos.service.EssayService;
 import com.example.myApp.demos.service.FileOptService;
+import com.example.myApp.demos.service.UserService;
+import com.example.myApp.demos.util.IpUtil;
 import com.example.myApp.demos.util.JwtUtil;
 import com.github.pagehelper.PageInfo;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -22,6 +25,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.util.Objects;
 
+@Slf4j
 @RestController
 public class EssayController {
 
@@ -30,6 +34,9 @@ public class EssayController {
 
     @Resource
     private FileOptService fileOptService;
+
+    @Resource
+    private UserService userService;
 
     @PostMapping("/createEssay")
     public R<String> createEssay(@RequestBody EssayDto essayDto, HttpServletRequest request) {
@@ -49,10 +56,12 @@ public class EssayController {
     }
 
     @PostMapping("/saveEssayContent")
-    public R<String> saveEssayContent(@RequestBody EssayDto essayDto) {
+    public R<String> saveEssayContent(@RequestBody EssayDto essayDto, HttpServletRequest request) {
         try {
             if (Objects.isNull(essayDto) || StringUtils.isEmpty(essayDto.getId()))
                 throw new RuntimeException(Constants.ILLEGAl_OPT);
+            boolean isAdmin = userService.checkAdminRole(JwtUtil.parseUidFromToken(request));
+            if (!isAdmin) essayDto.setIsPublic(1);
             return R.ok(essayService.saveEssayContent(essayDto));
         } catch (Exception e) {
             return R.fail(e.getMessage());
@@ -60,7 +69,7 @@ public class EssayController {
     }
 
     @PostMapping("/publishEssay")
-    public R<String> publishEssay(@RequestBody EssayDto essayDto) {
+    public R<String> publishEssay(@RequestBody EssayDto essayDto, HttpServletRequest request) {
         try {
             if (Objects.isNull(essayDto) || 1 != essayDto.getStatus())
                 throw new RuntimeException(Constants.ILLEGAl_OPT);
@@ -105,6 +114,8 @@ public class EssayController {
     public R<String> saveLink(@RequestBody LinkDto dto, HttpServletRequest request) {
         try {
             dto.setUser(JwtUtil.parseUidFromToken(request));
+            boolean isAdmin = userService.checkAdminRole(JwtUtil.parseUidFromToken(request));
+            if(isAdmin) dto.setIsPublic(1);
             String msg = essayService.saveLink(dto);
             return R.ok(msg);
         } catch (Exception e) {
@@ -116,13 +127,11 @@ public class EssayController {
         // 获取文件输入流
         String storagePath = essayDto.getStoragePath();
 
-        // 获取操作系统类型（Windows: "Windows XP/7/10/Server"，Linux: "Linux"，Mac: "Mac OS X"）
-        String osName = System.getProperty("os.name").toLowerCase();
-        if(osName.contains("windows")){
+        String localIp = IpUtil.getLocalIp();
+        if (!localIp.startsWith("124.223")) {
             if (storagePath.startsWith("/")) {
-                storagePath = storagePath.substring(1); // 去掉开头的/
+                storagePath = storagePath.substring(1);
             }
-            // 替换Linux路径分隔符为Windows分隔符，拼接D:
             storagePath = "D:\\" + storagePath.replace("/", "\\");
         }
 

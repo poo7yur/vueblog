@@ -21,4 +21,6 @@ public interface UserMapper {
 
     void updateAvatar(String shareUrl, String userId);
 
+    Set<String> getRoleByUid(String userId);
+
 }

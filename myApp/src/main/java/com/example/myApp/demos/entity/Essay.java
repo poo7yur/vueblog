@@ -19,13 +19,14 @@ public class Essay {
     private Date updateTime;
     private String createUser;
     private int status;
+    private int isPublic;
     private int isShare;
     private int type;
 
-    public Essay(String id, String title, String summary, Date updateTime) {
+    public Essay(String id, String title, String summary ,int isPublic) {
         this.id = id;
         this.title = title;
         this.summary = summary;
-        this.updateTime = updateTime;
+        this.isPublic = isPublic;
     }
 }

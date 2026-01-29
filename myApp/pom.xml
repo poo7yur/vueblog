@@ -41,6 +41,19 @@
             <version>2.3.5</version>
         </dependency>
 
+<!--        <dependency>-->
+<!--            <groupId>nl.siegmann.epublib</groupId>-->
+<!--            <artifactId>epublib-core</artifactId>-->
+<!--            <version>3.1</version>-->
+<!--        </dependency>-->
+
+        <!-- ZIP解压 -->
+        <dependency>
+            <groupId>org.zeroturnaround</groupId>
+            <artifactId>zt-zip</artifactId>
+            <version>1.15</version>
+        </dependency>
+
         <!-- hutool 工具箱-->
         <dependency>
             <groupId>cn.hutool</groupId>
