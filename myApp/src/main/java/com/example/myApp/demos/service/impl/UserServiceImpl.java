@@ -2,16 +2,15 @@ package com.example.myApp.demos.service.impl;
 
 import cn.hutool.core.util.RandomUtil;
 import com.example.myApp.demos.Constants;
-import com.example.myApp.demos.dto.LoginDto;
-import com.example.myApp.demos.dto.RegisterDto;
-import com.example.myApp.demos.dto.TokenDto;
-import com.example.myApp.demos.dto.UserGroup;
+import com.example.myApp.demos.dto.*;
 import com.example.myApp.demos.entity.User;
+import com.example.myApp.demos.entity.UserFollow;
 import com.example.myApp.demos.mapper.UserMapper;
 import com.example.myApp.demos.service.FileOptService;
 import com.example.myApp.demos.service.UserService;
 import com.example.myApp.demos.util.JwtUtil;
 import com.example.myApp.demos.util.Md5Util;
+import com.example.myApp.demos.vo.MyFollowUser;
 import com.example.myApp.demos.vo.UserVo;
 import io.jsonwebtoken.Claims;
 import org.apache.commons.lang3.ObjectUtils;
@@ -146,11 +145,156 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public boolean checkAdminRole(String userId) {
-        if(StringUtils.isEmpty(userId)) throw new RuntimeException(Constants.ILLEGAl_OPT);
+        if (StringUtils.isEmpty(userId)) throw new RuntimeException(Constants.ILLEGAl_OPT);
         boolean isAdmin = false;
         Set<String> roles = userMapper.getRoleByUid(userId);
-        if(roles.contains("admin")) isAdmin = true;
+        if (roles.contains("admin")) isAdmin = true;
         return isAdmin;
+    }
+
+    @Override
+    public String updateUser(RegisterDto dto, String un) {
+        User user = userMapper.findUser(un);
+        if (ObjectUtils.isEmpty(user)) throw new RuntimeException(Constants.USER_NOT_FIND);
+        if (!StringUtils.isEmpty(dto.getName()))
+            if (dto.getName().equals(user.getName())) throw new RuntimeException("暂不支持用户名修改");
+        if (!StringUtils.isEmpty(dto.getPassword())) {
+            String newHashPwd = Md5Util.md5(dto.getPassword() + user.getSalt());
+            dto.setPassword(newHashPwd);
+        }
+        dto.setName(user.getName());
+        userMapper.updateUser(dto);
+        return "修改用户信息成功";
+    }
+
+    @Override
+    public UserVo userDetail(String uid) {
+        if(StringUtils.isEmpty(uid))
+            throw new RuntimeException(Constants.TOKEN_EXPIRED);
+        UserVo uv = userMapper.getUserById(uid);
+        if(ObjectUtils.isEmpty(uv))
+            throw new RuntimeException(Constants.USER_NOT_FIND);
+        return uv;
+    }
+
+    @Override
+    public List<UserVo> listUser(String username) {
+        return userMapper.listUser(username);
+    }
+
+    @Override
+    public List<MyFollowUser> followInfo(String userId, String state) {
+        //state取值 0 关注我的  1 被我关注的 2被我拉黑的
+        List<MyFollowUser> list;
+        switch (state) {
+            case "0":
+                list = userMapper.selectMyFans(userId);
+                break;
+            case "1":
+                list = userMapper.selectMyFollow(userId);
+                break;
+            case "2":
+                list = userMapper.selectMyBlock(userId);
+                break;
+            default:
+                throw new RuntimeException(Constants.PARAM_ERR);
+        }
+        return list;
+    }
+
+    @Override
+    public String action(ActDto dto) {
+        String action = dto.getAction();
+        String fromUser = dto.getFromUser();
+        String toUser = dto.getToUser();
+        String msg = Constants.PARAM_ERR;
+        if (StringUtils.isAnyEmpty(fromUser, toUser) || fromUser.equals(toUser)) {
+            throw new RuntimeException(Constants.ILLEGAl_OPT);
+        }
+        if (StringUtils.isEmpty(action))
+            throw new IllegalArgumentException(msg);
+        //先查看下当前的状态
+        Integer status = userMapper.getFollowStatus(fromUser, toUser);
+        switch (action) {
+            case "follow": // 关注
+                return follow(fromUser, toUser, status);
+
+            case "cancelFollow": // 取消关注
+                return cancelFollow(fromUser, toUser, status);
+
+            case "block": // 拉黑
+                return block(fromUser, toUser, status);
+
+            case "unblock": //解除拉黑
+                return unblock(fromUser, toUser, status);
+
+            default:
+                throw new RuntimeException(msg);
+        }
+    }
+
+    private String unblock(String fromUser, String toUser, Integer status) {
+        if (status == null || status != -1) {
+            throw new RuntimeException("未拉黑该用户，无法解除");
+        }
+
+        userMapper.updateFollowStatus(new ActDto(fromUser, toUser, "unblock"));
+        return "解除拉黑成功";
+    }
+
+    private String block(String fromUser, String toUser, Integer status) {
+        if (status != null && status == -1) {
+            return "已经拉黑，无需重复操作";
+        }
+
+        if (status == null) {
+            // 创建拉黑记录
+            UserFollow uf = new UserFollow();
+            uf.setFollowId(fromUser);
+            uf.setFollowingId(toUser);
+            uf.setStatus(-1);
+            uf.setCreateTime(new Date());
+            userMapper.saveFollow(uf);
+        } else {
+            userMapper.updateFollowStatus(new ActDto(fromUser, toUser, "block"));
+        }
+        return "拉黑成功";
+    }
+
+    private String cancelFollow(String fromUser, String toUser, Integer status) {
+        if (status == null || status != 1) {
+            throw new RuntimeException("未关注该用户，无法取消关注");
+        }
+
+        // 逻辑删除
+        userMapper.updateFollowStatus(new ActDto(fromUser, toUser, "cancelFollow"));
+        return "取消关注成功";
+    }
+
+    private String follow(String fromUser, String toUser, Integer status) {
+        //检查一下是否以及被对方拉黑
+        Integer reverseStatus = userMapper.getFollowStatus(toUser, fromUser);
+        if (reverseStatus != null && reverseStatus == -1) throw new RuntimeException("你被对方拉黑无法关注！");
+        if (status != null && status == 1) {
+            return "已经关注，无需重复操作";
+        } else if (status != null && status == -1) {
+            throw new RuntimeException("你已将对方拉黑，关注前需解除拉黑");
+        }
+
+        Date now = new Date();
+
+        if (status == null) {
+            UserFollow uf = new UserFollow();
+            uf.setFollowId(fromUser);
+            uf.setFollowingId(toUser);
+            uf.setStatus(1);
+            uf.setCreateTime(now);
+            userMapper.saveFollow(uf);
+        } else {
+            // 之前取消过，重新关注：更新状态
+            userMapper.updateFollowStatus(new ActDto(fromUser, toUser, "follow"));
+        }
+        return "关注成功";
     }
 
     private void validate(MultipartFile file) {

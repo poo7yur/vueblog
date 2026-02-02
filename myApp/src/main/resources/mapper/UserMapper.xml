@@ -17,6 +17,47 @@
         update t_user set head_pic_url =#{param1} where user_id =#{param2}
     </update>
 
+    <insert id="saveFollow">
+        insert into user_follow (follower_id, following_id, status, create_time)  values (#{followId}, #{followingId}, #{status}, #{createTime})
+    </insert>
+
+    <update id="updateFollowStatus">
+        update user_follow set
+        <choose>
+            <when test='action == "follow"'>
+                status =1,
+            </when>
+            <when test='action == "block"'>
+                status =-1,
+            </when>
+            <otherwise>
+                status =0,
+            </otherwise>
+        </choose>
+        update_time = now()
+        where follower_id = #{fromUser} AND following_id = #{toUser}
+    </update>
+
+    <update id="updateUser">
+        update t_user set
+        <if test =' email != null and email != "" '>
+            email =#{email},
+        </if>
+        <if test =' phone != null and phone != "" '>
+            phone =#{phone},
+        </if>
+        <if test =' password != null and password != "" '>
+            password =#{password}
+        </if>
+        where name =#{name}
+    </update>
+
+    <delete id="deleteFollowRelation">
+        delete from user_follow
+        where (follower_id = #{fromUser} and following_id = #{toUser})
+        or (follower_id = #{toUser} and following_id = #{fromUser})
+    </delete>
+
     <select id="findUser" resultType="com.example.myApp.demos.entity.User">
         select * from t_user where name =#{name} and status =0
     </select>
@@ -26,7 +67,49 @@
     </select>
 
     <select id="getRoleByUid" resultType="java.lang.String">
-        SELECT tr.role_name from t_user tu inner join t_role_user tru  on tru.user_id =tu.user_id  inner join t_role tr on tr.role_id  = tru.role_id where tu.user_id =#{param1}
+        select r.role_name from t_user tu
+        inner join t_role_user tru on tru.user_id =tu.user_id
+        inner join t_role r on r.role_id  = tru.role_id
+        where tu.user_id =#{param1}
+    </select>
+
+    <select id="getFollowStatus" resultType="java.lang.Integer">
+        select status from user_follow where follower_id = #{param1} and following_id = #{param2}
+    </select>
+
+    <select id="listUser" resultType="com.example.myApp.demos.vo.UserVo">
+        select u.user_id ,u.name from t_user u
+        where status =0 and not exists (
+        SELECT 1
+        FROM user_follow uf
+        WHERE
+        uf.status =-1 and u.user_id = uf.following_id
+        )
+        <if test='un != null and un != ""'>
+            and u.name like concat('%', #{un, jdbcType=VARCHAR}, '%')
+        </if>
+    </select>
+
+    <select id="selectMyFans" resultType="com.example.myApp.demos.vo.MyFollowUser">
+        select uf.follower_id userId ,tu.name ,tu.head_pic_url from user_follow uf
+        inner join t_user tu on tu.user_id = uf.follower_id
+        where uf.status =1 and uf.following_id =#{param1}
+    </select>
+
+    <select id="selectMyFollow" resultType="com.example.myApp.demos.vo.MyFollowUser">
+        select uf.following_id userId,tu.name ,tu.head_pic_url from user_follow uf
+        inner join t_user tu on tu.user_id = uf.following_id
+        where uf.status =1 and uf.follower_id =#{param1}
+    </select>
+
+    <select id="selectMyBlock" resultType="com.example.myApp.demos.vo.MyFollowUser">
+        select uf.following_id userId ,tu.name ,tu.head_pic_url from user_follow uf
+        inner join t_user tu on tu.user_id = uf.following_id
+        where uf.status =-1 and uf.follower_id =#{param1}
+    </select>
+
+    <select id="getUserById" resultType="com.example.myApp.demos.vo.UserVo">
+        select * from t_user where status =0 and user_id =#{param1}
     </select>
 
 </mapper>
