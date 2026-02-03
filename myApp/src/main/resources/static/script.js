@@ -143,7 +143,7 @@ function loadFolder(folderPath) {
   })
     .then((response) => response.json())
     .then((imgData) => {
-      const urls = imgData.data.images;
+      const urls = imgData.data.urls;
       if (imgData.code === 0 && Array.isArray(urls)) {
         renderImageGrid(urls);
       } else {

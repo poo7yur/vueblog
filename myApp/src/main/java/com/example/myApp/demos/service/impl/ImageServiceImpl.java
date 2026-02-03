@@ -71,7 +71,7 @@ public class ImageServiceImpl implements ImageService {
         //用户名集合
         Set<String> userNames = userMapper.queryNames();
         //解析登录状态
-        String loginUser = JwtUtil.parseUserFromToken(request);
+        String loginUser = JwtUtil.parseUser(request);
         //递归目录
         return DirUtil.buildTree(Paths.get(fullPath), loginUser, userNames);
     }
@@ -83,7 +83,7 @@ public class ImageServiceImpl implements ImageService {
         PageImageVo pageImageVo = new PageImageVo();
         BeanUtils.copyProperties(dto, pageImageVo);
         pageImageVo.setTotal(total);
-        pageImageVo.setImages(imgUrls);
+        pageImageVo.setUrls(imgUrls);
         return pageImageVo;
     }
 
@@ -224,7 +224,7 @@ public class ImageServiceImpl implements ImageService {
         // 1. 拿到真实文件路径
         Path targetPath = parseRealPath(dto.getPath());
         // 2. 安全校验：必须位于当前登录用户的空间内
-        String username = JwtUtil.parseUserFromToken(request);
+        String username = JwtUtil.parseUser(request);
         Path userSpace = Paths.get(fileDir, username).toAbsolutePath();
         if (!targetPath.toAbsolutePath().startsWith(userSpace)) throw new RuntimeException(Constants.ILLEGAl_OPT);
         // 3. 删除
@@ -235,7 +235,7 @@ public class ImageServiceImpl implements ImageService {
     @Override
     public String shareImage(OptDto dto, HttpServletRequest request) throws IOException {
         // 从token里校验当前用户是否有权限
-        String username = JwtUtil.parseUserFromToken(request);
+        String username = JwtUtil.parseUser(request);
         if (StringUtils.isEmpty(username)) throw new RuntimeException(Constants.TOKEN_EXPIRE);
         Path fullPath = parseRealPath(dto.getPath());
         Path userSpace = Paths.get(fileDir, username).toAbsolutePath();
@@ -243,7 +243,7 @@ public class ImageServiceImpl implements ImageService {
         if (!fullPath.toAbsolutePath().startsWith(userSpace)) throw new RuntimeException(Constants.ILLEGAl_OPT);
 
         // 写share_image表记录共享操作
-        String uid = JwtUtil.parseUidFromToken(request);
+        String uid = JwtUtil.parseUid(request);
         ShareImage shareImage = new ShareImage();
         String rid = RandomUtil.randomString(10);
         shareImage.setId(rid);
@@ -278,7 +278,7 @@ public class ImageServiceImpl implements ImageService {
         }
 
         // 2. 从token解析用户ID并校验
-        String userId = JwtUtil.parseUidFromToken(request);
+        String userId = JwtUtil.parseUid(request);
         if (StringUtils.isEmpty(userId)) {
             throw new RuntimeException(Constants.TOKEN_EXPIRE);
         }
@@ -334,7 +334,7 @@ public class ImageServiceImpl implements ImageService {
         if (StringUtils.isEmpty(dto.getPath()) || StringUtils.isEmpty(remark))
             throw new IllegalArgumentException(Constants.PARM_NOT_NULL);
         //解析用户权限
-        String uid = JwtUtil.parseUidFromToken(request);
+        String uid = JwtUtil.parseUid(request);
         if (StringUtils.isEmpty(uid)) throw new RuntimeException(Constants.TOKEN_EXPIRE);
         String imgID = dto.getPath().split("_")[0];
         if (StringUtils.isEmpty(imgID)) throw new RuntimeException("图片ID不能为空");

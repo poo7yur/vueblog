@@ -1,6 +1,7 @@
 package com.example.myApp.demos.util;
 
 import com.example.myApp.demos.dto.ImageDto;
+import org.springframework.util.StringUtils;
 
 import java.io.File;
 import java.io.IOException;
@@ -10,6 +11,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 import java.util.Set;
 
 public class DirUtil {
@@ -64,6 +66,33 @@ public class DirUtil {
             }
         }
         return node;
+    }
+
+    public static List<String> scanBookFile(File dir) {
+        List<String> bookFileUrls = new ArrayList<>();
+        // 目录不存在/不是目录，直接返回空
+        if (Objects.isNull(dir) || !dir.exists() || !dir.isDirectory()) {
+            return bookFileUrls;
+        }
+
+        // 扫描一级文件（listFiles()返回目录下所有文件/文件夹，仅一级）
+        File[] files = dir.listFiles();
+        if (Objects.isNull(files)) {
+            return bookFileUrls;
+        }
+
+        // 遍历过滤：仅保留【文件】+【.epub后缀】（忽略大小写，兼容.EPUB/.Epub）
+        for (File file : files) {
+            // 排除文件夹、仅处理文件
+            if (file.isFile() && StringUtils.hasText(file.getName())) {
+                String fileName = file.getName().toLowerCase();
+                if (fileName.endsWith(".epub")) {
+                    // 收集**绝对全路径**（前端/后续解析需完整路径）
+                    bookFileUrls.add(file.getAbsolutePath());
+                }
+            }
+        }
+        return bookFileUrls;
     }
 
     /**

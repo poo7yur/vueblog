@@ -135,7 +135,7 @@ public class UserServiceImpl implements UserService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public String changeAvatar(MultipartFile file, HttpServletRequest request) throws Exception {
-        String userId = JwtUtil.parseUidFromToken(request);
+        String userId = JwtUtil.parseUid(request);
         if (StringUtils.isEmpty(userId)) throw new RuntimeException(Constants.INVALID_TOKEN);
         validate(file);
         String shareUrl = fileOptService.uploadFile(file, userId);

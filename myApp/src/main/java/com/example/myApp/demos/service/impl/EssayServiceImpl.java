@@ -112,8 +112,8 @@ public class EssayServiceImpl implements EssayService {
     @Override
     @Transactional(rollbackFor = Exception.class)
     public String createEssay(EssayDto essayDto, HttpServletRequest request) throws Exception {
-        String userId = JwtUtil.parseUidFromToken(request);
-        String userName = JwtUtil.parseUserFromToken(request);
+        String userId = JwtUtil.parseUid(request);
+        String userName = JwtUtil.parseUser(request);
         if (StringUtils.isEmpty(userId) || StringUtils.isEmpty(userName))
             throw new RuntimeException(Constants.TOKEN_EXPIRED);
         String id = RandomUtil.randomNumbers(6);

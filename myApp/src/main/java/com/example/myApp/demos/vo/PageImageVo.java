@@ -7,7 +7,7 @@ import java.util.List;
 @Data
 public class PageImageVo {
 
-    private List<String> images;
+    private List<String> urls;
     private int total;
     private int pageNo;
     private int pageSize;

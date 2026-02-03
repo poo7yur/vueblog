@@ -51,7 +51,7 @@ public class EssayController {
 
     @PostMapping("/queryEssay")
     public R<PageInfo<Essay>> queryEssay(@RequestBody PageDto dto, HttpServletRequest request) {
-        dto.setUserId(JwtUtil.parseUidFromToken(request));
+        dto.setUserId(JwtUtil.parseUid(request));
         return R.ok(essayService.queryEssay(dto));
     }
 
@@ -60,7 +60,7 @@ public class EssayController {
         try {
             if (Objects.isNull(dto) || StringUtils.isEmpty(dto.getId()))
                 throw new RuntimeException(Constants.ILLEGAl_OPT);
-            boolean isAdmin = userService.checkAdminRole(JwtUtil.parseUidFromToken(request));
+            boolean isAdmin = userService.checkAdminRole(JwtUtil.parseUid(request));
             if (isAdmin) dto.setIsPublic(1);
             return R.ok(essayService.saveEssayContent(dto));
         } catch (Exception e) {
@@ -113,8 +113,8 @@ public class EssayController {
     @PostMapping("/saveLink")
     public R<String> saveLink(@RequestBody LinkDto dto, HttpServletRequest request) {
         try {
-            dto.setUser(JwtUtil.parseUidFromToken(request));
-            boolean isAdmin = userService.checkAdminRole(JwtUtil.parseUidFromToken(request));
+            dto.setUser(JwtUtil.parseUid(request));
+            boolean isAdmin = userService.checkAdminRole(JwtUtil.parseUid(request));
             if (isAdmin) dto.setIsPublic(1);
             String msg = essayService.saveLink(dto);
             return R.ok(msg);

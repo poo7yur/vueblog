@@ -51,7 +51,7 @@ public class UserController {
     @AccessLog(module = "user manage", description = "update user")
     public R<String> updateUser(@RequestBody RegisterDto dto, HttpServletRequest request) {
         try {
-            String un = JwtUtil.parseUserFromToken(request);
+            String un = JwtUtil.parseUser(request);
             if (StringUtils.isEmpty(un)) throw new RuntimeException(Constants.INVALID_TOKEN);
             return R.ok(userService.updateUser(dto, un));
         } catch (Exception e) {
@@ -62,7 +62,7 @@ public class UserController {
     @GetMapping("/userDetail")
     public R<UserVo> userDetail(HttpServletRequest request) {
         try {
-            String uid = JwtUtil.parseUidFromToken(request);
+            String uid = JwtUtil.parseUid(request);
             return R.ok(userService.userDetail(uid));
         } catch (Exception e) {
             return R.fail(e.getMessage());
@@ -91,7 +91,7 @@ public class UserController {
     @PostMapping("/action")
     public R<String> action(@RequestBody ActDto dto, HttpServletRequest request) {
         try {
-            String currentUser = JwtUtil.parseUidFromToken(request);
+            String currentUser = JwtUtil.parseUid(request);
             dto.setFromUser(currentUser);
             String msg = userService.action(dto);
             return R.ok(msg);
@@ -103,7 +103,7 @@ public class UserController {
     @GetMapping("/followInfo")
     public R<List<MyFollowUser>> followInfo(@RequestParam String state, HttpServletRequest request) {
         try {
-            String userId = JwtUtil.parseUidFromToken(request);
+            String userId = JwtUtil.parseUid(request);
             if (StringUtils.isEmpty(userId)) throw new RuntimeException(Constants.TOKEN_EXPIRED);
             return R.ok(userService.followInfo(userId, state));
         } catch (Exception e) {

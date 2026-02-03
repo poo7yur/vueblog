@@ -61,7 +61,7 @@ public class JwtUtil {
         }
     }
 
-    public static String parseUserFromToken(HttpServletRequest request) {
+    public static String parseUser(HttpServletRequest request) {
         String token = request.getHeader("token");
         if (StringUtils.isBlank(token)) {
             return null;
@@ -74,7 +74,7 @@ public class JwtUtil {
         }
     }
 
-    public static String parseUidFromToken(HttpServletRequest request) {
+    public static String parseUid(HttpServletRequest request) {
         String token = request.getHeader("token");
         if (StringUtils.isBlank(token)) {
             return null;
