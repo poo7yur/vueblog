@@ -116,7 +116,7 @@ public class EssayServiceImpl implements EssayService {
         String userName = JwtUtil.parseUser(request);
         if (StringUtils.isEmpty(userId) || StringUtils.isEmpty(userName))
             throw new RuntimeException(Constants.TOKEN_EXPIRED);
-        String id = RandomUtil.randomNumbers(6);
+        String id = RandomUtil.randomNumbers(8);
         Date date = new Date();
         String ymd = sdf.format(date);
         Essay essay = new Essay();

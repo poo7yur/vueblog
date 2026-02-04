@@ -887,13 +887,13 @@
         })
           .then((response) => response.json())
           .then((imgData) => {
-            if (imgData.code === 0 && Array.isArray(imgData.data.images)) {
+            if (imgData.code === 0 && Array.isArray(imgData.data.urls)) {
               // 计算总页数
               totalPages = Math.ceil(imgData.data.total / PAGE_SIZE);
 
               // 更新分页信息和按钮状态
               updatePaginationUI();
-              renderImageGrid(imgData.data.images);
+              renderImageGrid(imgData.data.urls);
             } else {
               folderView.innerHTML =
                 "<p class='empty-tip'>该文件夹暂无图片</p>";

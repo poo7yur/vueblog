@@ -16,6 +16,8 @@ public class Constants {
 
     public static final String ILLEGAl_OPT = "非法操作";
 
+    public static final String FAILED = "操作失败";
+
     public static final String PARAM_ERR = "参数异常";
 
     public static final String TOKEN_EXPIRE = "请重新登录";

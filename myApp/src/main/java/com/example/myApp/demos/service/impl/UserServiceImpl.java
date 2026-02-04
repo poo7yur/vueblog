@@ -50,7 +50,7 @@ public class UserServiceImpl implements UserService {
             Arrays.asList("image/png", "image/jpg", "image/jpeg", "image/webp", "image/bmp");
 
     public static final List<String> KEEP_WORD =
-            Arrays.asList("share", "public", "avatar");
+            Arrays.asList("share", "public", "avatar" ,"book");
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -138,7 +138,7 @@ public class UserServiceImpl implements UserService {
         String userId = JwtUtil.parseUid(request);
         if (StringUtils.isEmpty(userId)) throw new RuntimeException(Constants.INVALID_TOKEN);
         validate(file);
-        String shareUrl = fileOptService.uploadFile(file, userId);
+        String shareUrl = fileOptService.uploadAvatarFile(file, userId);
         userMapper.updateAvatar(shareUrl, userId);
         return shareUrl;
     }

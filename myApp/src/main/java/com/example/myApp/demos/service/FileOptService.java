@@ -6,7 +6,7 @@ import java.io.InputStream;
 
 public interface FileOptService {
 
-    String uploadFile(MultipartFile file, String objName) throws Exception;
+    String uploadAvatarFile(MultipartFile file, String objName) throws Exception;
 
     InputStream readFullPathFile(String fullPath) throws Exception;
 

@@ -41,7 +41,7 @@ public class MinioFileOptServiceImpl implements FileOptService {
     }
 
     @Override
-    public String uploadFile(MultipartFile file, String objName) throws Exception {
+    public String uploadAvatarFile(MultipartFile file, String objName) throws Exception {
         //检查桶是否存在 不在新建桶
         if (!minioClient.bucketExists(BucketExistsArgs.builder().bucket(bucket).build())) {
             minioClient.makeBucket(MakeBucketArgs.builder().bucket(bucket).build());

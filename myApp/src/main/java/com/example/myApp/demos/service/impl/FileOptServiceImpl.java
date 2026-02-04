@@ -61,7 +61,7 @@ public class FileOptServiceImpl implements FileOptService {
      * @throws Exception                上传过程中可能发生的其他异常
      */
     @Override
-    public String uploadFile(MultipartFile file, String dir) throws Exception {
+    public String uploadAvatarFile(MultipartFile file, String dir) throws Exception {
         // 1. 基础校验
         if (file == null || file.isEmpty()) {
             throw new IllegalArgumentException("文件不能为空");

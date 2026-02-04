@@ -19,7 +19,7 @@ public class DirUtil {
     public static Node buildTree(Path dir, String loginUser, Set<String> allUserNames) {
         String dirName = dir.getFileName().toString();
         allUserNames.add("avatar");
-
+        allUserNames.add("book");
         // 如果是“用户目录”且不是当前登录用户的目录，则直接跳过（不返回该分支）
         boolean isUserDir = allUserNames.contains(dirName);
         if (isUserDir && !dirName.equals(loginUser)) {
@@ -68,7 +68,7 @@ public class DirUtil {
         return node;
     }
 
-    public static List<String> scanBookFile(File dir) {
+    public static List<String> scanBookFile(File dir, boolean isPath) {
         List<String> bookFileUrls = new ArrayList<>();
         // 目录不存在/不是目录，直接返回空
         if (Objects.isNull(dir) || !dir.exists() || !dir.isDirectory()) {
@@ -88,7 +88,9 @@ public class DirUtil {
                 String fileName = file.getName().toLowerCase();
                 if (fileName.endsWith(".epub")) {
                     // 收集**绝对全路径**（前端/后续解析需完整路径）
-                    bookFileUrls.add(file.getAbsolutePath());
+                    if (isPath) {
+                        bookFileUrls.add(file.getAbsolutePath());
+                    } else bookFileUrls.add(fileName);//收集文件名
                 }
             }
         }

@@ -1,9 +1,15 @@
 package com.example.myApp.demos.service.impl;
 
+import cn.hutool.core.util.RandomUtil;
+import com.example.myApp.demos.Constants;
+import com.example.myApp.demos.dto.BookDto;
 import com.example.myApp.demos.dto.ChapterDto;
-import com.example.myApp.demos.dto.ImageDto;
+import com.example.myApp.demos.entity.Essay;
+import com.example.myApp.demos.mapper.EssayMapper;
 import com.example.myApp.demos.service.BookService;
+import com.example.myApp.demos.service.ImageService;
 import com.example.myApp.demos.util.DirUtil;
+import com.example.myApp.demos.util.IpUtil;
 import com.example.myApp.demos.vo.ChapterDataVo;
 import com.example.myApp.demos.vo.EpubBookCacheBO;
 import com.example.myApp.demos.vo.PageImageVo;
@@ -15,17 +21,20 @@ import nl.siegmann.epublib.domain.Resources;
 import nl.siegmann.epublib.domain.Spine;
 import nl.siegmann.epublib.domain.SpineReference;
 import nl.siegmann.epublib.epub.EpubReader;
+import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.io.ClassPathResource;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 
-import java.io.File;
-import java.io.IOException;
-import java.io.InputStream;
+import java.io.*;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.util.*;
 import java.util.Base64;
 import java.util.concurrent.TimeUnit;
@@ -36,6 +45,11 @@ import java.util.regex.Pattern;
 @Component
 public class EpubBookService implements BookService {
     private final EpubReader epubReader = new EpubReader();
+
+    private final static int DEFAULT_PAGE_SIZE = 3;
+
+    private final static String DEFAULT_COVER = "static/cover.jpg";
+
     // 正则：匹配h1-h6标题标签
     private static final Pattern H_TAG_PATTERN = Pattern.compile("(?i)<h[1-6].*?>(.*?)</h[1-6]>");
     // 正则：匹配img标签（捕获prefix/src/suffix，保留原有属性）
@@ -46,14 +60,23 @@ public class EpubBookService implements BookService {
             Pattern.CASE_INSENSITIVE
     );
 
-    @Value("${book.store}")
-    private String bookStore;
+    @Value("${server.port:8080}")
+    private Integer serverPort;
 
-    // Redis缓存配置
+    @Value("${file.dir}")
+    private String fileDir;
+
     @javax.annotation.Resource
     private RedisTemplate<String, Object> redisTemplate;
+    @javax.annotation.Resource
+    private ImageService imageService;
+    @javax.annotation.Resource
+    private EssayMapper essayMapper;
+
     private static final String CACHE_KEY_PREFIX = "epub:cache:";
     private static final long CACHE_EXPIRE_HOURS = 24;
+
+    private static final String BOOK = "book";
 
     @Override
     public ChapterDataVo loadChapter(ChapterDto dto) {
@@ -122,21 +145,131 @@ public class EpubBookService implements BookService {
         }
     }
 
+    /**
+     *
+     * 目录页查询图书列表
+     */
     @Override
-    public PageImageVo listBooks(ImageDto dto) {
+    public PageImageVo listBooks(BookDto dto) {
         PageImageVo pageImageVo = new PageImageVo();
-        String bookPath = bookStore + "/";
-        String userPath = bookPath + dto.getUserId();
+        String userId = dto.getUserId();
+        if (StringUtils.isEmpty(userId)) throw new RuntimeException(Constants.TOKEN_EXPIRED);
+        //默认放在C:\Users\Admin\Pictures\save\book\...
+        String bookPath = fileDir + "/" + BOOK +"/";
+        String userPath = bookPath + userId;
         String publicPath = bookPath + "public";
         //先循环userPath下的文件再循环publicPath下的文件(不要文件夹也不遍历子文件夹) 记录全路径在bookUrls
-        List<String> userUrls = DirUtil.scanBookFile(new File(userPath));
-        List<String> publicUrls = DirUtil.scanBookFile(new File(publicPath));
+        List<String> userUrls = DirUtil.scanBookFile(new File(userPath), true);
+        List<String> publicUrls = DirUtil.scanBookFile(new File(publicPath), true);
         userUrls.addAll(publicUrls);
         int total = userUrls.size();
         //按dto的pageNum=1 pageSize=10 的限制来返回url
         pageImageVo.setTotal(total);
         setPageResult(pageImageVo, userUrls, total, dto.getPageNo(), dto.getPageSize());
         return pageImageVo;
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public String delBook(String id, String userId) {
+        if (StringUtils.isAnyEmpty(id, userId))
+            throw new RuntimeException(Constants.PARM_NOT_NULL);
+        //用户目录根据id删除对应id.epub和id.jpg文件
+        String bookStore = fileDir + "/" + BOOK +"/";
+        File userSpace = new File(bookStore, userId);
+        if (!userSpace.exists() || !userSpace.isDirectory())
+            throw new RuntimeException(Constants.FILE_NOT_FOUND);
+        try {
+            File jpgFile = new File(userSpace, id + ".jpg");
+            if (jpgFile.exists()) {
+                jpgFile.delete();
+            }
+            File epubFile = new File(userSpace, id + ".epub");
+            if (epubFile.exists()) {
+                epubFile.delete();
+            }
+        } catch (Exception e) {
+            throw new RuntimeException(Constants.FAILED);
+        }
+        //逻辑删除t_essay表
+        essayMapper.delEssayById(id);
+        return "删除成功";
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public String uploadBook(MultipartFile file, String userId) throws IOException {
+        if (file == null) throw new IllegalArgumentException("待上传文件不能为空");
+        if(StringUtils.isEmpty(userId)) throw new RuntimeException(Constants.TOKEN_EXPIRED);
+        String originalFilename = file.getOriginalFilename();
+        if (originalFilename == null || !originalFilename.toLowerCase().endsWith(".epub")) {
+            throw new IllegalArgumentException("仅支持上传 EPUB 格式文件");
+        }
+        String prefix = fileDir + "/" + BOOK + "/";
+        File userSpace = new File(prefix, userId);
+        if (!userSpace.exists()) {
+            userSpace.mkdirs();
+        }
+        Essay essay = new Essay();
+        String id = RandomUtil.randomNumbers(9);
+        essay.setId(id);
+        essay.setCreateUser(userId);
+        //上传epub文件到用户目录
+        String storagePath = storageBook(file, userSpace, id);
+        //提取epub的封面
+        extractAndSaveCover(storagePath, userSpace, essay);
+        //写到t_essay表
+        essay.setType(2);
+        essay.setStoragePath(storagePath);
+        essayMapper.createEssay(essay);
+        return "上传成功";
+    }
+
+    private void extractAndSaveCover(String storagePath, File userSpace, Essay essay) throws IOException {
+        // 根据全路径 读取epub为book对象
+        Book book = epubReader.readEpub(Files.newInputStream(Paths.get(storagePath)));
+        String title = book.getTitle();
+        // 获取封面图片资源
+        Resource coverImage = book.getCoverImage();
+        String coverFileName = essay.getId() + ".jpg";
+        // 复制封面到用户目录下
+        File coverFile = new File(userSpace, coverFileName);
+        if (coverImage != null && coverImage.getData() != null) {
+            FileUtils.writeByteArrayToFile(coverFile, coverImage.getData());
+        } else {
+            copyDefaultCover(coverFile);
+        }
+        String ipPort = "http://" + IpUtil.getLocalIp() + ":" + serverPort;
+        String staticCoverUrl = ipPort + "/static/" + BOOK + "/" + essay.getCreateUser() + "/" + coverFileName;
+        essay.setSummary(staticCoverUrl);
+        essay.setTitle(title);
+    }
+
+    private void copyDefaultCover(File coverFile) {
+        try {
+            ClassPathResource resource = new ClassPathResource("static/cover.jpg");
+            FileUtils.copyInputStreamToFile(resource.getInputStream(), coverFile);
+        } catch (IOException e) {
+            throw new RuntimeException("复制默认封面失败");
+        }
+    }
+
+    private String storageBook(MultipartFile file, File userSpaceFile, String id) throws IOException {
+        String originalFilename = file.getOriginalFilename();
+        // 生成唯一文件名避免冲突
+        String fileExtension = "";
+        int dotIndex = 0;
+        if (originalFilename != null) {
+            dotIndex = originalFilename.lastIndexOf('.');
+        }
+        if (dotIndex > 0) {
+            fileExtension = originalFilename.substring(dotIndex);
+        }
+        String uniqueFileName = id + fileExtension;
+
+        File destFile = new File(userSpaceFile, uniqueFileName);
+        file.transferTo(destFile);
+        return destFile.getAbsolutePath();
     }
 
     private void setPageResult(PageImageVo pageVo, List<String> allList, int total, int pageNo, int pageSize) {
@@ -154,7 +287,6 @@ public class EpubBookService implements BookService {
         pageVo.setUrls(pageList);
         pageVo.setPageNo(pageNo);
         pageVo.setPageSize(pageSize);
-
     }
 
     /**

@@ -2,7 +2,7 @@
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
 <mapper namespace="com.example.myApp.demos.mapper.EssayMapper">
     <insert id="createEssay">
-        insert into essay (id ,title ,storage_path ,create_user ,update_time ,type ) values (#{e.id} ,#{e.title} ,#{e.storagePath} ,#{e.createUser} ,#{e.updateTime} ,#{e.type} )
+        insert into essay (id ,title ,storage_path ,create_user ,update_time ,type ,summary) values (#{e.id} ,#{e.title} ,#{e.storagePath} ,#{e.createUser} ,#{e.updateTime} ,#{e.type} ,#{e.summary})
     </insert>
 
     <update id="updateShare">
