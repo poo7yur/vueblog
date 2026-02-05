@@ -11,6 +11,7 @@ import com.example.myApp.demos.mapper.EssayMapper;
 import com.example.myApp.demos.service.EssayService;
 import com.example.myApp.demos.service.FileOptService;
 import com.example.myApp.demos.service.PyScriptService;
+import com.example.myApp.demos.util.IpUtil;
 import com.example.myApp.demos.util.JwtUtil;
 import com.github.pagehelper.PageHelper;
 import com.github.pagehelper.PageInfo;
@@ -43,6 +44,8 @@ public class EssayServiceImpl implements EssayService {
 
     @Value("${output.dir}")
     private String outputDir;
+    @Value("${server.port:8080}")
+    private Integer serverPort;
 
     private static final SimpleDateFormat sdf = new SimpleDateFormat("yyyyMMdd");
 
@@ -51,9 +54,24 @@ public class EssayServiceImpl implements EssayService {
     @Override
     public PageInfo<Essay> queryEssay(PageDto dto) {
         PageHelper.startPage(dto.getPageNum(), dto.getPageSize());
-        String uid =dto.getUserId();
+        String uid = dto.getUserId();
         List<Essay> list = essayMapper.queryEssay(dto, uid);
+        if (dto.getType() == 2) list.forEach(essay -> essay.setStoragePath(pathToUrl(essay.getStoragePath())));
         return new PageInfo<>(list);
+    }
+
+    private String pathToUrl(String storagePath) {
+        StringBuilder sb = new StringBuilder();
+        sb.append("http://").append(IpUtil.getLocalIp()).append(":").append(serverPort);
+        // 截取出从book开始的字符串且 windows路径转/
+        String normalizedPath = storagePath.replace("\\", "/").replace("epub", "jpg");
+        int bookIndex = normalizedPath.indexOf("/book/");
+        // 截取出从 book 开始的路径
+        String relativePath = normalizedPath.substring(bookIndex);
+        //返回完整的路径
+        String encodedPath = relativePath.replaceAll(" ", "%20"); // 空格转%20
+        sb.append("/static").append(encodedPath);
+        return sb.toString();
     }
 
     @Override

@@ -32,10 +32,10 @@ public class BookController {
 
     @GetMapping("/delBook")
     @AccessLog(module = "book manage" ,description = "delete book")
-    public R<String> delBook(@RequestParam("id") String id , HttpServletRequest request) {
+    public R<String> delBook(@RequestParam("name") String name , HttpServletRequest request) {
         try {
             String userId = JwtUtil.parseUid(request);
-            return R.ok(bookService.delBook(id ,userId));
+            return R.ok(bookService.delBook(name ,userId));
         } catch (Exception e){
             return R.fail(e.getMessage());
         }

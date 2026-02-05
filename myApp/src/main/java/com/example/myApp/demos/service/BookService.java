@@ -15,7 +15,7 @@ public interface BookService {
 
     PageImageVo listBooks(BookDto dto);
 
-    String delBook(String id, String userId);
+    String delBook(String name, String userId);
 
     String uploadBook(MultipartFile file, String userId) throws IOException;
 

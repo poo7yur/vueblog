@@ -28,10 +28,10 @@ public class PyScriptServiceImpl implements PyScriptService {
     // 使用有界队列和自定义线程工厂，避免资源耗尽
     private final ThreadPoolExecutor executor = new ThreadPoolExecutor(
             2,                                      // 核心线程数
-            10,                                     // 最大线程数
+            5,                                     // 最大线程数
             60L,                                    // 空闲线程存活时间
             TimeUnit.SECONDS,
-            new LinkedBlockingQueue<>(100),         // 有界队列，防止 OOM
+            new LinkedBlockingQueue<>(10),         // 有界队列，防止 OOM
             new ThreadFactory() {
                 private final AtomicInteger count = new AtomicInteger(0);
 

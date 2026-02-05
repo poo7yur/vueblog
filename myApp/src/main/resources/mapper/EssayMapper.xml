@@ -2,7 +2,7 @@
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
 <mapper namespace="com.example.myApp.demos.mapper.EssayMapper">
     <insert id="createEssay">
-        insert into essay (id ,title ,storage_path ,create_user ,update_time ,type ,summary) values (#{e.id} ,#{e.title} ,#{e.storagePath} ,#{e.createUser} ,#{e.updateTime} ,#{e.type} ,#{e.summary})
+        insert into essay (id ,title ,storage_path ,create_user ,update_time ,type ,summary ,is_share ,is_public) values (#{e.id} ,#{e.title} ,#{e.storagePath} ,#{e.createUser} ,#{e.updateTime} ,#{e.type} ,#{e.summary} ,#{e.isShare} ,#{e.isPublic})
     </insert>
 
     <update id="updateShare">
@@ -20,6 +20,10 @@
         update_time =now() where id =#{id}
     </update>
 
+    <delete id="delEssayByName">
+        delete from essay where title =#{t} and create_user =#{u}
+    </delete>
+
     <select id="queryEssay" resultType="com.example.myApp.demos.entity.Essay">
         select e.id ,e.summary ,e.title ,e.category ,e.storage_path ,e.is_share ,u.name as createUser
         from essay e inner join t_user u on u.user_id = e.create_user
@@ -27,8 +31,8 @@
         <choose>
             <when test='uid !=null'>
                 e.create_user = #{uid}
-                or (e.is_public = 1 and e.is_share = 1 and e.type =#{dto.type})
-                or (e.is_public = 0 and e.is_share = 1 and e.type =#{dto.type} and exists (
+                or (e.status =0 and e.is_public = 1 and e.is_share = 1 and e.type =#{dto.type})
+                or (e.status =0 and e.is_public = 0 and e.is_share = 1 and e.type =#{dto.type} and exists (
                 SELECT 1 FROM user_follow uf
                 where uf.follower_id = #{uid}
                 and uf.following_id = e.create_user

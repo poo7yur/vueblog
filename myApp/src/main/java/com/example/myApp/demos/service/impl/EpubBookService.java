@@ -8,8 +8,8 @@ import com.example.myApp.demos.entity.Essay;
 import com.example.myApp.demos.mapper.EssayMapper;
 import com.example.myApp.demos.service.BookService;
 import com.example.myApp.demos.service.ImageService;
+import com.example.myApp.demos.service.UserService;
 import com.example.myApp.demos.util.DirUtil;
-import com.example.myApp.demos.util.IpUtil;
 import com.example.myApp.demos.vo.ChapterDataVo;
 import com.example.myApp.demos.vo.EpubBookCacheBO;
 import com.example.myApp.demos.vo.PageImageVo;
@@ -72,6 +72,8 @@ public class EpubBookService implements BookService {
     private ImageService imageService;
     @javax.annotation.Resource
     private EssayMapper essayMapper;
+    @javax.annotation.Resource
+    private UserService userService;
 
     private static final String CACHE_KEY_PREFIX = "epub:cache:";
     private static final long CACHE_EXPIRE_HOURS = 24;
@@ -155,12 +157,12 @@ public class EpubBookService implements BookService {
         String userId = dto.getUserId();
         if (StringUtils.isEmpty(userId)) throw new RuntimeException(Constants.TOKEN_EXPIRED);
         //默认放在C:\Users\Admin\Pictures\save\book\...
-        String bookPath = fileDir + "/" + BOOK +"/";
-        String userPath = bookPath + userId;
-        String publicPath = bookPath + "public";
+        File bookFile = new File(fileDir, BOOK);
+        File userFile = new File(bookFile, userId);
+        File publicFile = new File(bookFile, "public");
         //先循环userPath下的文件再循环publicPath下的文件(不要文件夹也不遍历子文件夹) 记录全路径在bookUrls
-        List<String> userUrls = DirUtil.scanBookFile(new File(userPath), true);
-        List<String> publicUrls = DirUtil.scanBookFile(new File(publicPath), true);
+        List<String> userUrls = DirUtil.scanBookFile(userFile, true);
+        List<String> publicUrls = DirUtil.scanBookFile(publicFile, true);
         userUrls.addAll(publicUrls);
         int total = userUrls.size();
         //按dto的pageNum=1 pageSize=10 的限制来返回url
@@ -171,20 +173,20 @@ public class EpubBookService implements BookService {
 
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public String delBook(String id, String userId) {
-        if (StringUtils.isAnyEmpty(id, userId))
+    public String delBook(String name, String userId) {
+        if (StringUtils.isAnyEmpty(name, userId))
             throw new RuntimeException(Constants.PARM_NOT_NULL);
         //用户目录根据id删除对应id.epub和id.jpg文件
-        String bookStore = fileDir + "/" + BOOK +"/";
+        String bookStore = fileDir + "/" + BOOK + "/";
         File userSpace = new File(bookStore, userId);
         if (!userSpace.exists() || !userSpace.isDirectory())
             throw new RuntimeException(Constants.FILE_NOT_FOUND);
         try {
-            File jpgFile = new File(userSpace, id + ".jpg");
+            File jpgFile = new File(userSpace, name + ".jpg");
             if (jpgFile.exists()) {
                 jpgFile.delete();
             }
-            File epubFile = new File(userSpace, id + ".epub");
+            File epubFile = new File(userSpace, name + ".epub");
             if (epubFile.exists()) {
                 epubFile.delete();
             }
@@ -192,7 +194,7 @@ public class EpubBookService implements BookService {
             throw new RuntimeException(Constants.FAILED);
         }
         //逻辑删除t_essay表
-        essayMapper.delEssayById(id);
+        essayMapper.delEssayByName(name, userId);
         return "删除成功";
     }
 
@@ -200,13 +202,15 @@ public class EpubBookService implements BookService {
     @Transactional(rollbackFor = Exception.class)
     public String uploadBook(MultipartFile file, String userId) throws IOException {
         if (file == null) throw new IllegalArgumentException("待上传文件不能为空");
-        if(StringUtils.isEmpty(userId)) throw new RuntimeException(Constants.TOKEN_EXPIRED);
+        if (StringUtils.isEmpty(userId)) throw new RuntimeException(Constants.TOKEN_EXPIRED);
         String originalFilename = file.getOriginalFilename();
         if (originalFilename == null || !originalFilename.toLowerCase().endsWith(".epub")) {
             throw new IllegalArgumentException("仅支持上传 EPUB 格式文件");
         }
-        String prefix = fileDir + "/" + BOOK + "/";
-        File userSpace = new File(prefix, userId);
+        if (originalFilename.length() > 20) throw new RuntimeException("书名长度需小于20");
+        File bookFile = new File(fileDir, BOOK);
+        File userSpace = new File(bookFile, userId);
+        File publicFile = new File(bookFile, "public");
         if (!userSpace.exists()) {
             userSpace.mkdirs();
         }
@@ -214,24 +218,35 @@ public class EpubBookService implements BookService {
         String id = RandomUtil.randomNumbers(9);
         essay.setId(id);
         essay.setCreateUser(userId);
-        //上传epub文件到用户目录
-        String storagePath = storageBook(file, userSpace, id);
-        //提取epub的封面
-        extractAndSaveCover(storagePath, userSpace, essay);
+        //上传epub文件到用户目录 但当前用户是否是admin角色 是的话设置为公开分享
+        String storagePath;
+        if (userService.checkAdminRole(userId)) {
+            essay.setIsShare(1);
+            essay.setIsPublic(1);
+            //放到public目录下
+            storagePath = storageBook(file, publicFile);
+            extractAndSaveCover(storagePath, publicFile, essay, originalFilename);
+        } else {
+            storagePath = storageBook(file, userSpace);
+            //提取epub的封面
+            extractAndSaveCover(storagePath, userSpace, essay, originalFilename);
+        }
         //写到t_essay表
         essay.setType(2);
+        essay.setUpdateTime(new Date());
         essay.setStoragePath(storagePath);
         essayMapper.createEssay(essay);
         return "上传成功";
     }
 
-    private void extractAndSaveCover(String storagePath, File userSpace, Essay essay) throws IOException {
+    private void extractAndSaveCover(String storagePath, File userSpace, Essay essay, String of) throws IOException {
         // 根据全路径 读取epub为book对象
         Book book = epubReader.readEpub(Files.newInputStream(Paths.get(storagePath)));
-        String title = book.getTitle();
+        // book.title和用户上传的文件名可能不一样
+        String title = of.replace(".epub", "");
         // 获取封面图片资源
         Resource coverImage = book.getCoverImage();
-        String coverFileName = essay.getId() + ".jpg";
+        String coverFileName = title + ".jpg";
         // 复制封面到用户目录下
         File coverFile = new File(userSpace, coverFileName);
         if (coverImage != null && coverImage.getData() != null) {
@@ -239,9 +254,7 @@ public class EpubBookService implements BookService {
         } else {
             copyDefaultCover(coverFile);
         }
-        String ipPort = "http://" + IpUtil.getLocalIp() + ":" + serverPort;
-        String staticCoverUrl = ipPort + "/static/" + BOOK + "/" + essay.getCreateUser() + "/" + coverFileName;
-        essay.setSummary(staticCoverUrl);
+        essay.setSummary(book.getTitle());
         essay.setTitle(title);
     }
 
@@ -254,20 +267,9 @@ public class EpubBookService implements BookService {
         }
     }
 
-    private String storageBook(MultipartFile file, File userSpaceFile, String id) throws IOException {
+    private String storageBook(MultipartFile file, File userSpaceFile) throws IOException {
         String originalFilename = file.getOriginalFilename();
-        // 生成唯一文件名避免冲突
-        String fileExtension = "";
-        int dotIndex = 0;
-        if (originalFilename != null) {
-            dotIndex = originalFilename.lastIndexOf('.');
-        }
-        if (dotIndex > 0) {
-            fileExtension = originalFilename.substring(dotIndex);
-        }
-        String uniqueFileName = id + fileExtension;
-
-        File destFile = new File(userSpaceFile, uniqueFileName);
+        File destFile = new File(userSpaceFile, originalFilename);
         file.transferTo(destFile);
         return destFile.getAbsolutePath();
     }

@@ -15,6 +15,8 @@ public interface EssayMapper {
 
     void delEssayById(String id);
 
+    void delEssayByName(@Param("t") String name ,@Param("u") String userId);
+
     void createEssay(@Param("e") Essay essay);
 
     void updateEssay(Essay essay);
