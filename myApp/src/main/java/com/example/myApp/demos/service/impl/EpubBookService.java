@@ -155,14 +155,16 @@ public class EpubBookService implements BookService {
     public PageImageVo listBooks(BookDto dto) {
         PageImageVo pageImageVo = new PageImageVo();
         String userId = dto.getUserId();
+
         if (StringUtils.isEmpty(userId)) throw new RuntimeException(Constants.TOKEN_EXPIRED);
         //默认放在C:\Users\Admin\Pictures\save\book\...
         File bookFile = new File(fileDir, BOOK);
         File userFile = new File(bookFile, userId);
         File publicFile = new File(bookFile, "public");
         //先循环userPath下的文件再循环publicPath下的文件(不要文件夹也不遍历子文件夹) 记录全路径在bookUrls
-        List<String> userUrls = DirUtil.scanBookFile(userFile, true);
-        List<String> publicUrls = DirUtil.scanBookFile(publicFile, true);
+        String endFix =".epub";
+        List<String> userUrls = DirUtil.scanBookFile(userFile, true ,endFix);
+        List<String> publicUrls = DirUtil.scanBookFile(publicFile, true ,endFix);
         userUrls.addAll(publicUrls);
         int total = userUrls.size();
         //按dto的pageNum=1 pageSize=10 的限制来返回url

@@ -51,7 +51,10 @@ public class EssayController {
 
     @PostMapping("/queryEssay")
     public R<PageInfo<Essay>> queryEssay(@RequestBody PageDto dto, HttpServletRequest request) {
-        dto.setUserId(JwtUtil.parseUid(request));
+        String token = request.getHeader("token");
+        String userId = JwtUtil.parseUid(request);
+        if(null==userId && !StringUtils.isEmpty(token)) return R.fail(Constants.TOKEN_EXPIRED);
+        dto.setUserId(userId);
         return R.ok(essayService.queryEssay(dto));
     }
 

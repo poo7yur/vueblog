@@ -156,8 +156,6 @@ public class UserServiceImpl implements UserService {
     public String updateUser(RegisterDto dto, String un) {
         User user = userMapper.findUser(un);
         if (ObjectUtils.isEmpty(user)) throw new RuntimeException(Constants.USER_NOT_FIND);
-        if (!StringUtils.isEmpty(dto.getName()))
-            if (dto.getName().equals(user.getName())) throw new RuntimeException("暂不支持用户名修改");
         if (!StringUtils.isEmpty(dto.getPassword())) {
             String newHashPwd = Md5Util.md5(dto.getPassword() + user.getSalt());
             dto.setPassword(newHashPwd);

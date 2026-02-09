@@ -68,7 +68,7 @@ public class DirUtil {
         return node;
     }
 
-    public static List<String> scanBookFile(File dir, boolean isPath) {
+    public static List<String> scanBookFile(File dir, boolean isPath ,String endFix) {
         List<String> bookFileUrls = new ArrayList<>();
         // 目录不存在/不是目录，直接返回空
         if (Objects.isNull(dir) || !dir.exists() || !dir.isDirectory()) {
@@ -86,7 +86,7 @@ public class DirUtil {
             // 排除文件夹、仅处理文件
             if (file.isFile() && StringUtils.hasText(file.getName())) {
                 String fileName = file.getName().toLowerCase();
-                if (fileName.endsWith(".epub")) {
+                if (fileName.endsWith(endFix)){
                     // 收集**绝对全路径**（前端/后续解析需完整路径）
                     if (isPath) {
                         bookFileUrls.add(file.getAbsolutePath());
