@@ -21,6 +21,10 @@
         insert into user_follow (follower_id, following_id, status, create_time)  values (#{followId}, #{followingId}, #{status}, #{createTime})
     </insert>
 
+    <insert id="createOrder">
+        insert into t_order (order_id, order_name, create_by , create_time ,status ,pay_amount ,remark ,to_user ) values (#{orderId}, #{orderName}, #{createBy}, #{createTime}, #{status}, #{payAmount} , #{remark}, #{toUser})
+    </insert>
+
     <update id="updateFollowStatus">
         update user_follow set
         <choose>
@@ -50,6 +54,14 @@
             password =#{password}
         </if>
         where name =#{name}
+    </update>
+
+    <update id="updateOrderStatus">
+        update t_order set status = #{status} ,trade_no =#{tradeNo} where order_id = #{orderId}
+    </update>
+
+    <update id="expandUserSpace">
+        update t_user set default_mb =#{param2} where user_id =#{param1}
     </update>
 
     <delete id="deleteFollowRelation">
@@ -110,6 +122,10 @@
 
     <select id="getUserById" resultType="com.example.myApp.demos.vo.UserVo">
         select * from t_user where status =0 and user_id =#{param1}
+    </select>
+
+    <select id="getOrderById" resultType="com.example.myApp.demos.entity.Order">
+        select * from t_order where order_id = #{param1}
     </select>
 
 </mapper>

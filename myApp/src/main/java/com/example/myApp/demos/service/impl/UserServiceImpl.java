@@ -1,8 +1,17 @@
 package com.example.myApp.demos.service.impl;
 
 import cn.hutool.core.util.RandomUtil;
+import com.alipay.api.AlipayApiException;
+import com.alipay.api.AlipayClient;
+import com.alipay.api.DefaultAlipayClient;
+import com.alipay.api.domain.AlipayTradePrecreateModel;
+import com.alipay.api.domain.ExtendParams;
+import com.alipay.api.request.AlipayTradePrecreateRequest;
+import com.alipay.api.response.AlipayTradePrecreateResponse;
 import com.example.myApp.demos.Constants;
+import com.example.myApp.demos.config.PayConfig;
 import com.example.myApp.demos.dto.*;
+import com.example.myApp.demos.entity.Order;
 import com.example.myApp.demos.entity.User;
 import com.example.myApp.demos.entity.UserFollow;
 import com.example.myApp.demos.mapper.UserMapper;
@@ -13,6 +22,7 @@ import com.example.myApp.demos.util.Md5Util;
 import com.example.myApp.demos.vo.MyFollowUser;
 import com.example.myApp.demos.vo.UserVo;
 import io.jsonwebtoken.Claims;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.ObjectUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.BeanUtils;
@@ -24,14 +34,15 @@ import org.springframework.web.multipart.MultipartFile;
 
 import javax.annotation.Resource;
 import javax.servlet.http.HttpServletRequest;
+import java.math.BigDecimal;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.Duration;
 import java.util.*;
 
-
 @Service
+@Slf4j
 public class UserServiceImpl implements UserService {
 
     @Resource
@@ -39,6 +50,9 @@ public class UserServiceImpl implements UserService {
 
     @Resource
     private UserMapper userMapper;
+
+    @Resource
+    private PayConfig payConfig;
 
     @Resource
     private StringRedisTemplate stringRedisTemplate;
@@ -50,7 +64,7 @@ public class UserServiceImpl implements UserService {
             Arrays.asList("image/png", "image/jpg", "image/jpeg", "image/webp", "image/bmp");
 
     public static final List<String> KEEP_WORD =
-            Arrays.asList("share", "public", "avatar" ,"book");
+            Arrays.asList("share", "public", "avatar", "book");
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -167,12 +181,98 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public UserVo userDetail(String uid) {
-        if(StringUtils.isEmpty(uid))
+        if (StringUtils.isEmpty(uid))
             throw new RuntimeException(Constants.TOKEN_EXPIRED);
-        UserVo uv = userMapper.getUserById(uid);
-        if(ObjectUtils.isEmpty(uv))
-            throw new RuntimeException(Constants.USER_NOT_FIND);
-        return uv;
+        return userMapper.getUserById(uid);
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public String generatePayQrCode(PayDto dto) throws Exception {
+        if (dto.getAmount() == null || dto.getAmount() < 0) {
+            throw new IllegalArgumentException("支付金额不能为负数");
+        }
+        //创建订单消息
+        String orderId = RandomUtil.randomNumbers(18);
+        Order order = new Order();
+        order.setOrderId(orderId);
+        order.setOrderName("用户空间扩容到" + dto.getTargetSpace());
+        order.setPayAmount(BigDecimal.valueOf(dto.getAmount()));
+        order.setStatus(0);
+        order.setToUser("");
+        order.setCreateBy(dto.getUserId());
+        order.setCreateTime(new Date());
+        userMapper.createOrder(order);
+        //调第三方接口 返回一个二维码url
+        return createNativeOrder(order, dto);
+    }
+
+    @Override
+    public String checkPayResult(PayDto dto) {
+        UserVo user = userMapper.getUserById(dto.getUserId());
+        double targetSpace = Double.parseDouble(dto.getTargetSpace());
+        if(user.getDefaultMb()==targetSpace){
+            return "更新完成";
+        } else {
+            return "正在更新中";
+        }
+    }
+
+    private String createNativeOrder(Order order, PayDto dto) throws AlipayApiException {
+        // 获得初始化的 AlipayClient
+        AlipayClient alipayClient = getAlipayClient();
+
+        // 创建 API 对应的 request 类
+        AlipayTradePrecreateRequest request = getRequest(order, dto);
+
+        // 执行请求
+        AlipayTradePrecreateResponse response = alipayClient.execute(request);
+
+        if (response.isSuccess()) {
+            String qrCode = response.getQrCode(); // 二维码链接
+            log.info("支付宝预创建订单成功, orderId: {}, qrCode: {}", order.getOrderId(), qrCode);
+            return qrCode;
+        } else {
+            log.error("支付宝预创建订单失败, orderId: {}, msg: {}", order.getOrderId(), response.getMsg());
+            throw new RuntimeException("支付宝下单失败: " + response.getMsg() + ", " + response.getSubMsg());
+        }
+    }
+
+    private AlipayTradePrecreateRequest getRequest(Order order, PayDto dto) {
+        AlipayTradePrecreateRequest request = new AlipayTradePrecreateRequest();
+        request.setNotifyUrl(payConfig.getNotifyUrl());
+
+        // 组装业务参数
+        AlipayTradePrecreateModel model = new AlipayTradePrecreateModel();
+        // 商户订单号
+        model.setOutTradeNo(order.getOrderId());
+        // 订单总金额（单位：元）
+        model.setTotalAmount(order.getPayAmount().toString());
+        // 订单标题
+        model.setSubject(order.getOrderName());
+        // 订单描述
+        model.setBody("用户ID:" + dto.getUserId() + ",扩容到:" + dto.getTargetSpace());
+        // 业务扩展参数（存储额外信息，回调时会返回）
+        ExtendParams extendParams = new ExtendParams();
+        extendParams.setSysServiceProviderId(dto.getUserId()); // 可以用这个存 userId
+        model.setExtendParams(extendParams);
+        // 超时时间（可选）
+        model.setTimeoutExpress("30m"); // 30分钟未支付自动关闭
+
+        request.setBizModel(model);
+        return request;
+    }
+
+    private AlipayClient getAlipayClient() {
+        return new DefaultAlipayClient(
+                payConfig.getGatewayUrl(),      // 支付宝网关
+                payConfig.getAppId(),
+                payConfig.getPrivateKey(), // 商户私钥
+                "json",                            // 数据格式
+                "UTF-8",                           // 编码
+                payConfig.getPublicKey(), // 支付宝公钥（用于验签）
+                "RSA2"                             // 签名算法
+        );
     }
 
     @Override

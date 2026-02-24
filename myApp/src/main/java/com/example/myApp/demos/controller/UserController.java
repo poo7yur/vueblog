@@ -2,10 +2,7 @@ package com.example.myApp.demos.controller;
 
 import com.example.myApp.demos.Constants;
 import com.example.myApp.demos.aop.AccessLog;
-import com.example.myApp.demos.dto.ActDto;
-import com.example.myApp.demos.dto.LoginDto;
-import com.example.myApp.demos.dto.RegisterDto;
-import com.example.myApp.demos.dto.TokenDto;
+import com.example.myApp.demos.dto.*;
 import com.example.myApp.demos.entity.R;
 import com.example.myApp.demos.service.UserService;
 import com.example.myApp.demos.util.JwtUtil;
@@ -106,6 +103,24 @@ public class UserController {
             String userId = JwtUtil.parseUid(request);
             if (StringUtils.isEmpty(userId)) throw new RuntimeException(Constants.TOKEN_EXPIRED);
             return R.ok(userService.followInfo(userId, state));
+        } catch (Exception e) {
+            return R.fail(e.getMessage());
+        }
+    }
+
+    @PostMapping("/checkPayResult")
+    public R<String> checkPayResult(@RequestBody PayDto dto) {
+        try {
+            return R.ok(userService.checkPayResult(dto));
+        } catch (Exception e) {
+            return R.fail(e.getMessage());
+        }
+    }
+
+    @PostMapping("/generatePayQrCode")
+    public R<String> generatePayQrCode(@RequestBody PayDto dto) {
+        try {
+            return R.ok(userService.generatePayQrCode(dto));
         } catch (Exception e) {
             return R.fail(e.getMessage());
         }

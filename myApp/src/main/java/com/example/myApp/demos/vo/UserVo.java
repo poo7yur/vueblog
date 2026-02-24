@@ -11,6 +11,7 @@ public class UserVo {
     private String name;
     private String email;
     private String phone;
+    private double defaultMb;
     private Date createTime;
     private String token;
     private String headPicUrl;

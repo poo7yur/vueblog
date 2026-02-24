@@ -18,5 +18,4 @@ public interface LogMapper {
     Set<String> getMsgGroupIds(@Param("userId") String userId);
 
     void addLog(@Param("tMsg") MsgEntity msgEntity);
-
 }

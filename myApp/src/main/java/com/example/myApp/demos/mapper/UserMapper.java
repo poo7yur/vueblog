@@ -3,6 +3,7 @@ package com.example.myApp.demos.mapper;
 import com.example.myApp.demos.dto.ActDto;
 import com.example.myApp.demos.dto.RegisterDto;
 import com.example.myApp.demos.dto.UserGroup;
+import com.example.myApp.demos.entity.Order;
 import com.example.myApp.demos.entity.User;
 import com.example.myApp.demos.entity.UserFollow;
 import com.example.myApp.demos.vo.MyFollowUser;
@@ -48,5 +49,12 @@ public interface UserMapper {
 
     UserVo getUserById(String uid);
 
+    void createOrder(Order order);
+
+    void updateOrderStatus(@Param("orderId") String orderId, @Param("tn") String tradeNo, @Param("status") int i);
+
+    Order getOrderById(String id);
+
+    void expandUserSpace(String createBy, String s);
 
 }

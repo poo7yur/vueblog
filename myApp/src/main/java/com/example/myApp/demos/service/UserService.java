@@ -1,9 +1,6 @@
 package com.example.myApp.demos.service;
 
-import com.example.myApp.demos.dto.ActDto;
-import com.example.myApp.demos.dto.LoginDto;
-import com.example.myApp.demos.dto.RegisterDto;
-import com.example.myApp.demos.dto.TokenDto;
+import com.example.myApp.demos.dto.*;
 import com.example.myApp.demos.vo.MyFollowUser;
 import com.example.myApp.demos.vo.UserVo;
 import org.springframework.web.multipart.MultipartFile;
@@ -31,5 +28,9 @@ public interface UserService {
     String updateUser(RegisterDto dto ,String un);
 
     UserVo userDetail(String uid);
+
+    String generatePayQrCode(PayDto dto) throws Exception;
+
+    String checkPayResult(PayDto dto);
 
 }

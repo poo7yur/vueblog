@@ -1,9 +1,14 @@
 package com.example.myApp.demos.service.impl;
 
+import com.alipay.api.AlipayApiException;
+import com.alipay.api.internal.util.AlipaySignature;
 import com.example.myApp.demos.Constants;
+import com.example.myApp.demos.config.PayConfig;
 import com.example.myApp.demos.dto.PageDto;
 import com.example.myApp.demos.entity.MsgEntity;
+import com.example.myApp.demos.entity.Order;
 import com.example.myApp.demos.mapper.LogMapper;
+import com.example.myApp.demos.mapper.UserMapper;
 import com.example.myApp.demos.service.LogService;
 import com.example.myApp.demos.util.DirUtil;
 import com.example.myApp.demos.util.JwtUtil;
@@ -11,9 +16,11 @@ import com.example.myApp.demos.vo.SongVo;
 import com.github.pagehelper.PageHelper;
 import com.github.pagehelper.PageInfo;
 import io.jsonwebtoken.Claims;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import javax.annotation.Resource;
 import javax.servlet.http.HttpServletRequest;
@@ -21,6 +28,7 @@ import java.io.File;
 import java.util.*;
 
 @Service
+@Slf4j
 public class LogServiceImpl implements LogService {
 
     @Value("${music.store}")
@@ -28,6 +36,12 @@ public class LogServiceImpl implements LogService {
 
     @Resource
     private LogMapper logMapper;
+
+    @Resource
+    private PayConfig payConfig;
+
+    @Resource
+    private UserMapper userMapper;
 
     @Override
     public PageInfo<MsgEntity> getMsg(PageDto dto, HttpServletRequest request) {
@@ -88,6 +102,57 @@ public class LogServiceImpl implements LogService {
         }
 
         return songVos;
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public String alipayNotify(Map<String, String> params) throws AlipayApiException {
+        boolean signVerified = AlipaySignature.rsaCheckV1(
+                params,
+                payConfig.getPublicKey(),
+                "UTF-8",
+                "RSA2"
+        );
+        if (!signVerified) {
+            log.error("支付宝回调签名验证失败");
+            return "fail";
+        }
+
+        String outTradeNo = params.get("out_trade_no");  // 商户订单号
+        String tradeStatus = params.get("trade_status"); // 交易状态
+        String tradeNo = params.get("trade_no");         // 支付宝交易号
+
+        log.info("收到支付宝回调, orderId: {}, status: {}", outTradeNo, tradeStatus);
+        if ("TRADE_SUCCESS".equals(tradeStatus) || "TRADE_FINISHED".equals(tradeStatus)) {
+            // 幂等性检查：查询订单是否已处理
+            Order order = userMapper.getOrderById(outTradeNo);
+            if (order == null) {
+                log.error("订单不存在: {}", outTradeNo);
+                return "fail";
+            }
+            if (order.getStatus() == 1) {
+                log.info("订单已处理过，跳过: {}", outTradeNo);
+                return "success";
+            }
+            // 更新订单状态
+            userMapper.updateOrderStatus(outTradeNo, tradeNo ,1);
+
+            // 执行扩容操作
+            userMapper.expandUserSpace(order.getCreateBy(), extractTargetSpace(order.getOrderName()));
+
+            log.info("支付宝支付处理成功, orderId: {}", outTradeNo);
+        }
+
+        // 5. 返回 success 给支付宝（必须！否则支付宝会重复通知）
+        return "success";
+    }
+
+    private String extractTargetSpace(String orderName) {
+        // "用户空间扩容到1000" -> 提取 "1000"
+        if (orderName.contains("扩容到")) {
+            return orderName.substring(orderName.indexOf("扩容到"));
+        }
+        return "100";
     }
 
 }

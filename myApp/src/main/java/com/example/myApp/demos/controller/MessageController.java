@@ -17,7 +17,9 @@ import javax.servlet.http.HttpServletResponse;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.OutputStream;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 
 @RestController
@@ -34,6 +36,16 @@ public class MessageController {
          } catch (Exception e) {
              throw new RuntimeException(e);
          }
+    }
+
+    @PostMapping("/alipay/notify")
+    public R<String> alipayNotify(HttpServletRequest request){
+        try {
+            Map<String, String> paramsMap = convertRequestParamsToMap(request);
+            return R.ok(logService.alipayNotify(paramsMap));
+        } catch (Exception e){
+            return R.fail(e.getMessage());
+        }
     }
 
     @PostMapping("/getMsg")
@@ -73,6 +85,23 @@ public class MessageController {
         } catch (Exception e){
             throw new RuntimeException(e);
         }
+    }
+
+    /**
+     * 将 request 参数转换为 Map
+     */
+    private Map<String, String> convertRequestParamsToMap(HttpServletRequest request) {
+        Map<String, String> params = new HashMap<>();
+        Map<String, String[]> requestParams = request.getParameterMap();
+        for (String name : requestParams.keySet()) {
+            String[] values = requestParams.get(name);
+            String valueStr = "";
+            for (int i = 0; i < values.length; i++) {
+                valueStr = (i == values.length - 1) ? valueStr + values[i] : valueStr + values[i] + ",";
+            }
+            params.put(name, valueStr);
+        }
+        return params;
     }
 }
 
