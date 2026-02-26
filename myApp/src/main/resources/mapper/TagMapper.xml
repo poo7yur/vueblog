@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.example.myApp.demos.mapper.TagMapper">
+    <select id="listTags" resultType="com.example.myApp.demos.entity.Tag">
+        select * from t_tag where status =0
+        <choose>
+            <when test='isAdmin != "1"'>
+                and is_public =1
+                <if test='uid != null and uid != "" '>
+                    or update_by = #{uid}
+                </if>
+            </when>
+        </choose>
+        order by update_time desc
+    </select>
+
+    <insert id="addTag">
+        insert into t_tag (tag_id ,tag_name ,description ,update_time ,update_by ,color ,pid ,is_public ) values (#{t.tagId} ,#{t.tagName} ,#{t.description} ,#{t.updateTime} ,#{t.updateBy} ,#{t.color} ,#{t.pid} ,#{t.isPublic})
+    </insert>
+
+    <update id="updateTag">
+        update t_tag set
+        <if test='tagName != null and tagName!= ""'>tag_name = #{tagName},</if>
+        <if test='description != null and description!= ""'>description = #{description},</if>
+        <if test='color != null and color!= ""'>color = #{color},</if>
+        <if test='pid != null and pid!= ""'>pid = #{pid},</if>
+        update_time =now()
+        where tag_id =#{tagId} and update_by =#{updateBy}
+    </update>
+
+    <update id="bindTag">
+        update essay set category =#{dto.tagId} ,update_time = now() where id =#{dto.id}
+    </update>
+
+    <delete id="deleteTag">
+        delete from t_tag where tag_id =#{tid}
+        <if test='uid != null and uid!= ""'>
+            and update_by =#{uid}
+        </if>
+    </delete>
+</mapper>

@@ -16,6 +16,7 @@ public class Essay {
     private String title;
     private String storagePath;
     private String category;
+    private String tagColor;
     private Date updateTime;
     private String createUser;
     private int status;

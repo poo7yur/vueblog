@@ -25,8 +25,9 @@
     </delete>
 
     <select id="queryEssay" resultType="com.example.myApp.demos.entity.Essay">
-        select e.id ,e.summary ,e.title ,e.category ,e.storage_path ,e.is_share ,u.name as createUser
+        select e.id ,e.summary ,e.title ,tt.tag_name category ,tt.color tagColor, e.storage_path ,e.is_share ,u.name as createUser
         from essay e inner join t_user u on u.user_id = e.create_user
+        left join t_tag tt on tt.tag_id = e.category
         where e.status =0 and e.type =#{dto.type} and
         <choose>
             <when test='uid !=null'>
