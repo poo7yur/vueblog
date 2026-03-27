@@ -77,6 +77,9 @@ function fetchData() {
       if (data.code === 0) {
         rootData = data.data;
         renderTree(rootData, document.getElementById("treeContainer"));
+      } else if(data.code === 401){
+          handleTokenExpired();
+          return;
       }
     })
     .catch((err) => {
@@ -777,7 +780,7 @@ spaceLink.addEventListener("click", async function (e) {
   const userToken = localStorage.getItem("userToken");
   //判断userToken是否失效
   if ( !currentUser || !userToken || getTokenExpireTime(userToken)===0) {
-    handleTokenExpire();
+    handleTokenExpired();
     return;
   }
 
@@ -806,69 +809,74 @@ const getTokenExpireTime = (token) => {
   }
 };
 
-/**
- * @param {number} advanceTime - 提前刷新时间（默认5分钟，单位毫秒）
- */
-const startTokenRefreshMonitor = (advanceTime = 5 * 60 * 1000) => {
-  // 清除已有定时任务（避免重复创建）
-  if (window.tokenRefreshTimer) clearInterval(window.tokenRefreshTimer);
+function startTokenRefreshMonitor() {
+  const token = localStorage.getItem("userToken");
+  if (!token) return;
 
-  const refreshToken = async () => {
-    const currentToken = localStorage.getItem('userToken');
-    if (!currentToken) {
-      clearInterval(window.tokenRefreshTimer);
-      return;
-    }
-
-    const expireTime = getTokenExpireTime(currentToken);
+  // 解析 token 过期时间（假设 jwt 中有 exp 字段）
+  try {
+    const payload = JSON.parse(atob(token.split('.')[1]));
+    const expTime = payload.exp * 1000; // 转毫秒
     const now = Date.now();
-    const remainingTime = expireTime - now;
+    const timeLeft = expTime - now;
 
-    // 剩余时间小于提前刷新时间，且大于0（未过期），则刷新token
-    if (remainingTime > 0 && remainingTime <= advanceTime) {
-      try {
-        // 调用后端刷新token接口（需后端提供refreshToken接口，可携带旧token或refresh_token）
-        const response = await fetch('/refreshToken', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          }
-        });
-
-        const result = await response.json();
-        if (result.code === 0 && result.data.newJwtToken) {
-          // 更新localStorage中的token
-          localStorage.setItem('userToken', result.data.newJwtToken);
-        } else {
-          // 刷新失败（如旧token已无效），清除token并跳转登录页
-          handleTokenExpire();
+    // 提前 5 分钟提示刷新
+    if (timeLeft > 0 && timeLeft < 300000) {
+      window.tokenRefreshTimer = setTimeout(() => {
+        if (confirm("登录即将过期，是否刷新？")) {
+          // 调用刷新 token 接口
+          refreshToken();
         }
-      } catch (error) {
-        console.error('token刷新失败：', error);
-        handleTokenExpire();
+      }, timeLeft);
+    }
+  } catch (e) {
+    console.error("Token 解析失败", e);
+  }
+}
+
+async function refreshToken() {
+  try {
+    const response = await fetch("/refreshToken", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "token": localStorage.getItem("userToken")
       }
+    });
+    const result = await response.json();
+    if (result.code === 0) {
+      localStorage.setItem("userToken", result.data.token);
+      startTokenRefreshMonitor(); // 重启监控
+      alert("Token 刷新成功");
+    } else {
+      handleTokenExpired();
     }
+  } catch (error) {
+    handleTokenExpired();
+  }
+}
 
-    // 若token已过期，直接处理过期逻辑
-    if (remainingTime <= 0) {
-      clearInterval(window.tokenRefreshTimer);
-      handleTokenExpire();
+/* 处理登录失效 */
+function handleTokenExpired() {
+  // 清理 localStorage
+  localStorage.removeItem("userToken");
+  localStorage.removeItem("currentUser");
+  localStorage.removeItem("currentUserId");
+
+  // 停止 token 刷新监控
+  if (window.tokenRefreshTimer) {
+    clearTimeout(window.tokenRefreshTimer);
+  }
+
+  // 弹窗提示
+  if (confirm("登录已失效，请重新登录！")) {
+    // 显示登录弹窗
+    const loginModal = document.getElementById("loginModalMask");
+    if (loginModal) {
+      loginModal.style.display = "flex";
     }
-  };
+  }
 
-  // 初始化时先执行一次检查，之后每隔1分钟检查一次（可调整检查频率）
-  refreshToken();
-  window.tokenRefreshTimer = setInterval(refreshToken, 30 * 60 * 1000);
-};
-
-/**
- * token过期统一处理
- */
-const handleTokenExpire = () => {
-  // 1. 清除localStorage中的JWT令牌
-  localStorage.removeItem('userToken');
-  // 2. 提示用户token过期
-  alert('登录信息已过期，请重新登录');
-  // 3. 跳转至登录页（根据你的项目路由调整）
-  loginModalMask.style.display = "flex"; // 直接弹出登录框
-};
+  // 可选：刷新页面
+  // window.location.reload();
+}

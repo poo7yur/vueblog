@@ -27,6 +27,13 @@ public class R<T> implements Serializable {
         return r;
     }
 
+    public static <T> R<T> error(String error ,int code) {
+        R<T> r = new R<>();
+        r.setMsg(error);
+        r.setCode(code);
+        return r;
+    }
+
     public static <T> R<T> fail(String msg) {
         return fail(500, msg);
     }

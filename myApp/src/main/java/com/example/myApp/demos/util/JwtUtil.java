@@ -15,8 +15,8 @@ public class JwtUtil {
     private static final String SECRET_KEY_STR = "myAppSecretKey_2026_32chars_length_1234";
     // 转换为 jjwt 要求的 SecretKey 类型（推荐使用 Keys 工具类生成，避免密钥格式错误）
     private static final SecretKey SECRET_KEY = Keys.hmacShaKeyFor(SECRET_KEY_STR.getBytes());
-    // 2. Token 过期时间配置（示例：2 小时，单位：毫秒）
-    private static final long EXPIRATION_TIME = 2 * 60 * 60 * 1000L;
+    // 2. Token 过期时间配置（示例：6 小时，单位：毫秒）
+    private static final long EXPIRATION_TIME = 6 * 60 * 60 * 1000L;
 
     /**
      * 生成 JWT Token

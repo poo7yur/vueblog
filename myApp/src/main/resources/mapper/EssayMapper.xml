@@ -5,6 +5,10 @@
         insert into essay (id ,title ,storage_path ,create_user ,update_time ,type ,summary ,is_share ,is_public) values (#{e.id} ,#{e.title} ,#{e.storagePath} ,#{e.createUser} ,#{e.updateTime} ,#{e.type} ,#{e.summary} ,#{e.isShare} ,#{e.isPublic})
     </insert>
 
+    <insert id="addRss" useGeneratedKeys="true" keyProperty="id">
+        insert into t_user_rss_rel (user_id ,rss_url ,corn ,remark ,enable ,create_time) values (#{userId} ,#{rssUrl} ,#{corn} ,#{remark} ,#{enable} ,#{createTime})
+    </insert>
+
     <update id="updateShare">
         update essay set is_share = #{share} where id = #{id}
     </update>
@@ -18,6 +22,13 @@
         <if test='title != null and title!= ""'>title = #{title},</if>
         <if test='summary != null and summary!= ""'>summary = #{summary},</if>
         update_time =now() where id =#{id}
+    </update>
+
+    <update id="batchSaveEssay">
+        insert into essay (id ,title ,storage_path ,create_user ,update_time ,type ,summary ,is_share ,is_public) values
+        <foreach collection="es" item="e" separator="," index="index">
+            (#{e.id} ,#{e.title} ,#{e.storagePath} ,#{e.createUser} ,#{e.updateTime} ,#{e.type} ,#{e.summary} ,#{e.isShare} ,#{e.isPublic})
+        </foreach>
     </update>
 
     <delete id="delEssayByName">
@@ -45,5 +56,9 @@
             </otherwise>
         </choose>
         order by e.update_time desc
+    </select>
+
+    <select id="getUserRssJob" resultType="com.example.myApp.demos.entity.UserRssRel">
+        select * from t_user_rss_rel where enable=1
     </select>
 </mapper>

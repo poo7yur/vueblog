@@ -59,6 +59,13 @@
             <version>2.15.1</version>
         </dependency>
 
+        <!-- RSS 解析 -->
+        <dependency>
+            <groupId>com.rometools</groupId>
+            <artifactId>rome</artifactId>
+            <version>2.1.0</version>
+        </dependency>
+
         <!-- ZIP解压 -->
         <dependency>
             <groupId>org.zeroturnaround</groupId>

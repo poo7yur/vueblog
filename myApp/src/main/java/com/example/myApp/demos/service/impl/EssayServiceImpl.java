@@ -7,6 +7,7 @@ import com.example.myApp.demos.dto.EssayDto;
 import com.example.myApp.demos.dto.LinkDto;
 import com.example.myApp.demos.dto.PageDto;
 import com.example.myApp.demos.entity.Essay;
+import com.example.myApp.demos.entity.UserRssRel;
 import com.example.myApp.demos.mapper.EssayMapper;
 import com.example.myApp.demos.service.EssayService;
 import com.example.myApp.demos.service.FileOptService;
@@ -170,6 +171,14 @@ public class EssayServiceImpl implements EssayService {
         //调用py脚本 生成一个html
         pyScriptService.invokeBsScript(taskId, url, r -> handleSuccess(taskId, r, isPublic), e -> handleFailure(taskId, e));
         return "保存成功";
+    }
+
+    @Override
+    public String addRss(UserRssRel dto) {
+        if(StringUtils.isEmpty(dto.getRssUrl()) ||StringUtils.isEmpty(dto.getCorn()))
+            throw new RuntimeException(Constants.PARAM_ERR);
+        essayMapper.addRss(dto);
+        return String.valueOf(dto.getId());
     }
 
     // 成功处理

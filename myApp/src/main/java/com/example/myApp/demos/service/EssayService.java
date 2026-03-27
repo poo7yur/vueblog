@@ -4,6 +4,7 @@ import com.example.myApp.demos.dto.EssayDto;
 import com.example.myApp.demos.dto.LinkDto;
 import com.example.myApp.demos.dto.PageDto;
 import com.example.myApp.demos.entity.Essay;
+import com.example.myApp.demos.entity.UserRssRel;
 import com.github.pagehelper.PageInfo;
 
 import javax.servlet.http.HttpServletRequest;
@@ -21,4 +22,7 @@ public interface EssayService {
     String createEssay(EssayDto essayDto , HttpServletRequest request) throws Exception;
 
     String saveLink(LinkDto dto) throws Exception;
+
+    String addRss(UserRssRel dto);
+
 }

@@ -6,6 +6,7 @@ import com.example.myApp.demos.dto.LinkDto;
 import com.example.myApp.demos.dto.PageDto;
 import com.example.myApp.demos.entity.Essay;
 import com.example.myApp.demos.entity.R;
+import com.example.myApp.demos.entity.UserRssRel;
 import com.example.myApp.demos.service.EssayService;
 import com.example.myApp.demos.service.FileOptService;
 import com.example.myApp.demos.service.UserService;
@@ -14,9 +15,7 @@ import com.example.myApp.demos.util.JwtUtil;
 import com.github.pagehelper.PageInfo;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import javax.annotation.Resource;
 import javax.servlet.http.HttpServletRequest;
@@ -126,10 +125,19 @@ public class EssayController {
         }
     }
 
+    @PostMapping("/addRss")
+    public R<String> addRss(@RequestBody UserRssRel dto ,HttpServletRequest request) {
+        try {
+            dto.setUserId(JwtUtil.parseUid(request));
+            dto.setCorn("0 0 8 * * ?");
+            String msg = essayService.addRss(dto);
+            return R.ok(msg);
+        } catch (Exception e){
+            return R.fail(e.getMessage());
+        }
+    }
     private void writeByStream(EssayDto essayDto, HttpServletResponse response, String fileName) throws Exception {
-        // 获取文件输入流
         String storagePath = essayDto.getStoragePath();
-
         String localIp = IpUtil.getLocalIp();
         if (!localIp.startsWith("124.223")) {
             if (storagePath.startsWith("/")) {
@@ -137,7 +145,7 @@ public class EssayController {
             }
             storagePath = "D:\\" + storagePath.replace("/", "\\");
         }
-
+        // 获取文件输入流
         InputStream ins = fileOptService.readFullPathFile(storagePath);
 
         // 设置响应头

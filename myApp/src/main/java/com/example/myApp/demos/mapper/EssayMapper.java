@@ -2,6 +2,7 @@ package com.example.myApp.demos.mapper;
 
 import com.example.myApp.demos.dto.PageDto;
 import com.example.myApp.demos.entity.Essay;
+import com.example.myApp.demos.entity.UserRssRel;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 
@@ -20,5 +21,11 @@ public interface EssayMapper {
     void createEssay(@Param("e") Essay essay);
 
     void updateEssay(Essay essay);
+
+    int addRss(UserRssRel dto);
+
+    void batchSaveEssay(@Param("es") List<Essay> essays);
+
+    List<UserRssRel> getUserRssJob();
 
 }

@@ -209,7 +209,7 @@ public class EpubBookService implements BookService {
         if (originalFilename == null || !originalFilename.toLowerCase().endsWith(".epub")) {
             throw new IllegalArgumentException("仅支持上传 EPUB 格式文件");
         }
-        if (originalFilename.length() > 20) throw new RuntimeException("书名长度需小于20");
+        if (originalFilename.length() > 50) throw new RuntimeException("书名长度需小于50");
         File bookFile = new File(fileDir, BOOK);
         File userSpace = new File(bookFile, userId);
         File publicFile = new File(bookFile, "public");

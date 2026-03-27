@@ -13,7 +13,7 @@ import java.io.IOException;
 import java.util.List;
 
 public interface ImageService {
-    DirUtil.Node scanner(String path, HttpServletRequest request) throws IOException;
+    DirUtil.Node scanner(String path, String loginUser) throws Exception;
 
     PageImageVo listImages(ImageDto dto);
 

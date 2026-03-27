@@ -59,19 +59,17 @@ public class ImageServiceImpl implements ImageService {
      * 扫描指定路径下的目录结构并构建树形节点
      *
      * @param path    要扫描的目录路径，如果为空则使用默认文件目录 如果有值则是当前用户路径下
-     * @param request HTTP请求对象，用于解析用户登录状态
+     * @param loginUser 登录用户
      * @return 包含目录结构的树形节点对象
      */
     @Override
-    public DirUtil.Node scanner(String path, HttpServletRequest request) throws IOException {
+    public DirUtil.Node scanner(String path, String loginUser) throws Exception {
         boolean isPath = StringUtils.isEmpty(path);
         String fullPath = isPath ? fileDir : fileDir + path;
         //如果是当前用户直接进他的空间不过滤
         if (!isPath) return DirUtil.scannerTree(fullPath);
         //用户名集合
         Set<String> userNames = userMapper.queryNames();
-        //解析登录状态
-        String loginUser = JwtUtil.parseUser(request);
         //递归目录
         return DirUtil.buildTree(Paths.get(fullPath), loginUser, userNames);
     }

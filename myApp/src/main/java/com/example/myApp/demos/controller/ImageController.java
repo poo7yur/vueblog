@@ -9,6 +9,8 @@ import com.example.myApp.demos.entity.CommentEntity;
 import com.example.myApp.demos.entity.R;
 import com.example.myApp.demos.service.ImageService;
 import com.example.myApp.demos.util.DirUtil;
+import com.example.myApp.demos.util.JwtUtil;
+import com.example.myApp.demos.util.TokenExpiredException;
 import com.example.myApp.demos.vo.PageImageVo;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.web.bind.annotation.*;
@@ -16,7 +18,6 @@ import org.springframework.web.multipart.MultipartFile;
 
 import javax.annotation.Resource;
 import javax.servlet.http.HttpServletRequest;
-import java.io.IOException;
 import java.util.List;
 
 @RestController
@@ -28,8 +29,15 @@ public class ImageController {
     @GetMapping("/scanner")
     public R<DirUtil.Node> scanner(@RequestParam(required = false) String path, HttpServletRequest request) {
         try {
-            return R.ok(imageService.scanner(path, request));
-        } catch (IOException e) {
+            //解析登录状态
+            String loginUser = JwtUtil.parseUser(request);
+            String token = request.getHeader("token");
+            if (!StringUtils.isEmpty(token) && StringUtils.isEmpty(loginUser))
+                throw new TokenExpiredException(401, "token已失效");
+            return R.ok(imageService.scanner(path, loginUser));
+        } catch (TokenExpiredException e) {
+            return R.error(e.getMsg(), e.getCode());
+        } catch (Exception e) {
             return R.fail(e.getMessage());
         }
     }
