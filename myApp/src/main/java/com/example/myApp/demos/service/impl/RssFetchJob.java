@@ -13,17 +13,15 @@ import com.rometools.rome.io.XmlReader;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
 import java.net.URL;
 import java.text.SimpleDateFormat;
 import java.util.*;
-import java.util.concurrent.atomic.AtomicInteger;
 
 @Service
 @Slf4j
-public class RssFetchService {
+public class RssFetchJob {
     @Value("${output.dir}")
     private String outputDir;
 
@@ -40,14 +38,11 @@ public class RssFetchService {
         List<Essay> essays = new ArrayList<>();
         Date now = new Date();
         List<UserRssRel> userRssRels = essayMapper.getUserRssJob();
-        AtomicInteger ai = new AtomicInteger(0);
         userRssRels.forEach(userRssRel -> {
             try {
                 URL url = new URL(userRssRel.getRssUrl());
                 SyndFeed feed = new SyndFeedInput().build(new XmlReader(url.openStream()));
                 for (SyndEntry entry : feed.getEntries()) {
-                    ai.getAndIncrement();
-                    if (ai.get() > 5) continue;
                     String taskId = RandomUtil.randomNumbers(10);
                     Essay essay = new Essay();
                     essay.setId(taskId);
