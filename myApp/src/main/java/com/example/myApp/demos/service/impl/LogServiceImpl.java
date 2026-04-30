@@ -7,11 +7,13 @@ import com.example.myApp.demos.config.PayConfig;
 import com.example.myApp.demos.dto.PageDto;
 import com.example.myApp.demos.entity.MsgEntity;
 import com.example.myApp.demos.entity.Order;
+import com.example.myApp.demos.entity.UserChat;
 import com.example.myApp.demos.mapper.LogMapper;
 import com.example.myApp.demos.mapper.UserMapper;
 import com.example.myApp.demos.service.LogService;
 import com.example.myApp.demos.util.DirUtil;
 import com.example.myApp.demos.util.JwtUtil;
+import com.example.myApp.demos.vo.ChatLogVo;
 import com.example.myApp.demos.vo.SongVo;
 import com.github.pagehelper.PageHelper;
 import com.github.pagehelper.PageInfo;
@@ -145,6 +147,21 @@ public class LogServiceImpl implements LogService {
 
         // 5. 返回 success 给支付宝（必须！否则支付宝会重复通知）
         return "success";
+    }
+
+    @Override
+    public void saveUserChat(UserChat userChat) {
+        logMapper.aveUserChat(userChat);
+    }
+
+    @Override
+    public void updateChatLog(String chatId, String summaryContent, String answerStatus) {
+        logMapper.updateChatLog(chatId ,summaryContent ,answerStatus);
+    }
+
+    @Override
+    public ChatLogVo getChat(String tmp, String uid) {
+        return logMapper.getChat(tmp, uid);
     }
 
     private String extractTargetSpace(String orderName) {

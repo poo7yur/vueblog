@@ -11,6 +11,14 @@
         insert into t_msg(msg_id ,msg_content ,update_time ,state ,create_by ,group_id ,msg_type ,user_id) values (#{tMsg.msgId} ,#{tMsg.msgContent} ,#{tMsg.updateTime} ,#{tMsg.state} ,#{tMsg.createBy} ,#{tMsg.groupId} ,#{tMsg.msgType} ,#{tMsg.userId})
     </insert>
 
+    <insert id="aveUserChat">
+        insert into user_chat (chat_id ,user_id ,msg ,answer ,create_time) values (#{uc.chatId} ,#{uc.userId} ,#{uc.msg} ,#{uc.answer} ,now())
+    </insert>
+
+    <update id="updateChatLog">
+        update user_chat set answer =#{res} ,status =#{status} where chat_id =#{id}
+    </update>
+
     <select id="getMsg" resultType="com.example.myApp.demos.entity.MsgEntity">
         select tm.msg_id ,tm.msg_content ,tm.update_time ,tm.state ,tm.group_id ,tu.name as createBy ,
         CASE
@@ -29,6 +37,14 @@
 
     <select id="getMsgGroupIds" resultType="java.lang.String">
         select distinct group_id from t_user_group where user_id = #{userId}
+    </select>
+
+    <select id="getChat" resultType="com.example.myApp.demos.vo.ChatLogVo">
+        select msg ,answer ,date_format(create_time,'%Y-%m-%d %H:%i:%s') timestp
+        from user_chat where user_id =#{param2}
+        and create_time &lt; #{param1}
+        order by create_time desc
+        limit 1
     </select>
 
 </mapper>
