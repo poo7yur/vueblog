@@ -164,8 +164,12 @@ public class LogServiceImpl implements LogService {
         return logMapper.getChat(tmp, uid);
     }
 
+    @Override
+    public void modifyUserChat(String taskId, String fileUrl) {
+        logMapper.modifyUserChat(taskId ,fileUrl);
+    }
+
     private String extractTargetSpace(String orderName) {
-        // "用户空间扩容到1000" -> 提取 "1000"
         if (orderName.contains("扩容到")) {
             return orderName.substring(orderName.indexOf("扩容到"));
         }

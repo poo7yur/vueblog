@@ -12,11 +12,15 @@
     </insert>
 
     <insert id="aveUserChat">
-        insert into user_chat (chat_id ,user_id ,msg ,answer ,create_time) values (#{uc.chatId} ,#{uc.userId} ,#{uc.msg} ,#{uc.answer} ,now())
+        insert into user_chat (chat_id ,user_id ,msg ,answer ,create_time ,task_id ,type) values (#{uc.chatId} ,#{uc.userId} ,#{uc.msg} ,#{uc.answer} ,now() ,#{uc.taskId} ,#{uc.type})
     </insert>
 
     <update id="updateChatLog">
         update user_chat set answer =#{res} ,status =#{status} where chat_id =#{id}
+    </update>
+
+    <update id="modifyUserChat">
+        update user_chat set answer =#{param2} ,status ='success' where task_id =#{param1}
     </update>
 
     <select id="getMsg" resultType="com.example.myApp.demos.entity.MsgEntity">

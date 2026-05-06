@@ -27,4 +27,6 @@ public interface LogService {
 
     ChatLogVo getChat(String tmp, String uid);
 
+    void modifyUserChat(String taskId, String fileUrl);
+
 }
